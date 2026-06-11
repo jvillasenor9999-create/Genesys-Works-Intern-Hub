@@ -1,0 +1,6 @@
+{
+  "name": "Intern Support Hub",
+  "description": "An interactive workspace and support system for summer interns to manage onboarding, view project tasks, access learning resources, connect with advisors, and find support FAQ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
