@@ -16,48 +16,24 @@ import {
   ChevronRight,
   Plus
 } from 'lucide-react';
-import { Task } from '../types';
+import { Task, ManagedUser } from '../types';
 
 interface TaskDetailModalProps {
   task: Task;
   onClose: () => void;
   onUpdateTask: (updatedTask: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  assignableUsers: ManagedUser[];
+  currentUser?: ManagedUser;
 }
-
-// Available members for assignment
-const TEAM_MEMBERS = [
-  {
-    name: 'Alex Rivera',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8'
-  },
-  {
-    name: 'Sarah Anderson',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmwwOwBpBgsYSE1SoGXp1Wa7o_edMgDb7qj4xRspqVRNb5EdBl32A40gQj1ZJrL6Od9tZVzh6G27x8T9XL3Zw0r9ePCTrbcVt-VhSNIM-61Nr0YnAlEnKwEk7fb0-WWuE20Wg6rf4cDnqq0PbYmyVB_EjxKbQXKqZffdowXXHbFsqOzgpIUsL90dPkYnmYTN_ZtUOWwhZvbt2-4jTMURjCZAqG9YM0gycWTQyJpzafPlCzxgBFwjLZZvitek1BD8niZSu9hXNqt9g'
-  },
-  {
-    name: 'Amos Rivera',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAmEVf4Rp70djzKh_JfrtcGH8gV04tp3CmE1NwqNq7pHaICO8fSR-ccV_jO6D-mU3ZE3i5zbdVQp55rBuSkxJNKY1PcxsRht4wxDsJPJzNK1PbSOCxdR7wb39NV5rz59mxEmvK1-AuaHeHG9OULZuqrlIGzZG5qmbf35Chldy0K1d9O0aSjDH2Qa-0Z9AdzL5xfokjEbirSPNhNFeGiVlvi2akR4fyRylnr4BRcgKD8gINPStgJTys052RF_KnaNg8fkfq1Ua0n2uk'
-  },
-  {
-    name: 'Marcus Chen',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDqQoFrciSutG-llI_5OmFesWaHSbfKbJ89PWvuoCpGtAGdAhoNIFwe6Op-LyyZWK-gHRo8DS_fj-7qI7FBrxz7hJ7hpHAyiWlUPp7VObpvLExELVn6XntTeXw4hX1hDW6aH1fKXemmsccxJC4ng1B5SzEiozR2oTeRVNBq4rKjopSGkfLBC38v1hcawwN5mA1SBQXNNtf23O2stHfICljEhzzjifaiSRDGR3EEuBoqgFpcTXgCw6sAFu_TlzhQQ-pYGXWJrJFxdM8'
-  },
-  {
-    name: 'Thomas Wright',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBlFZmdGnXv88Iq2TLd4u47C1qVJKNlcNnWUH6Y8l7-SvFHMUH1zH1AAvi6AtCowAqRHIO-0tmyIma9Pff_OX34Fl_mJRmzFJeulL8_JTc7lwvhM_B5QPjGv-VNbIjjZGjZ_B4PQrxkyOjuVmhaRm4CPIwZ2gffZawnHJOOl8QaQIF85yibmOP6geQ8TIg5hfGL7tmaRX9TXcVJeDMdlONWgEJHw4K3FoqQy_8_L7RD76ogYVkAYX63Vzr9spX08CIo-WW01p6Lo_k'
-  },
-  {
-    name: 'Jasmine Lee',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGdqcGBvWzX4W0pLtK6WK5xNDjzekwKynlTNOnSVihl0q0SrKpTV5UsU7Fgh7mdUCozYXSZzbcHKXnry8SQwoOIo3_MqdxFlC44NrKItrmou3Ip_3ywtFIOUV2mTk6wij7Lurwx64hu8f1ncQk9bMg5KctsKGNp-omd4g3H1CfK1sLqNdUGZWIM1QjZnb-LbVlz13B60JJ_n8eEmNxiavXUEhB3JZAIEVwjGbe2ABjV-ZQ_Ndwc_x5oe44U2PPSrCMDDD65BITo0w'
-  }
-];
 
 export default function TaskDetailModal({
   task,
   onClose,
   onUpdateTask,
-  onDeleteTask
+  onDeleteTask,
+  assignableUsers,
+  currentUser
 }: TaskDetailModalProps) {
   // Local edit states
   const [title, setTitle] = useState(task.title);
@@ -70,21 +46,19 @@ export default function TaskDetailModal({
   const [comments, setComments] = useState(task.comments || []);
   const [newCommentText, setNewCommentText] = useState('');
 
-  // Assignee states
-  const [assigneeName, setAssigneeName] = useState(task.assignee?.name || '');
+  const initialAssigneeUserId = task.assigneeUserId
+    || assignableUsers.find(user => user.name === task.assignee?.name)?.id
+    || '';
+  const [assigneeUserId, setAssigneeUserId] = useState(initialAssigneeUserId);
+  const selectedAssignee = assignableUsers.find(user => user.id === assigneeUserId);
+
+  const getAssigneeSnapshot = (userId: string) => {
+    const user = assignableUsers.find(member => member.id === userId);
+    return user ? { name: user.name, avatar: user.avatar } : undefined;
+  };
 
   // Handle saving edits immediately to parent (reactive updates)
   const handleNotifyUpdate = (overrides: Partial<Task> = {}) => {
-    let currentAssignee = task.assignee;
-    if (assigneeName) {
-      const match = TEAM_MEMBERS.find(m => m.name === assigneeName);
-      if (match) {
-        currentAssignee = { name: match.name, avatar: match.avatar };
-      }
-    } else {
-      currentAssignee = undefined;
-    }
-
     const updated: Task = {
       ...task,
       title,
@@ -94,7 +68,8 @@ export default function TaskDetailModal({
       priority,
       dueDate,
       progress: progress > 0 || task.progress !== undefined ? progress : undefined,
-      assignee: currentAssignee,
+      assigneeUserId: assigneeUserId || undefined,
+      assignee: getAssigneeSnapshot(assigneeUserId),
       comments,
       commentsCount: comments.length,
       ...overrides
@@ -113,8 +88,8 @@ export default function TaskDetailModal({
 
     const newComment = {
       id: `comment-${Date.now()}`,
-      author: 'Alex Rivera (You)',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8',
+      author: currentUser ? `${currentUser.name} (You)` : 'Active Intern (You)',
+      avatar: currentUser?.avatar || selectedAssignee?.avatar || '',
       text: newCommentText.trim(),
       date: 'Just now'
     };
@@ -133,23 +108,16 @@ export default function TaskDetailModal({
       priority,
       dueDate,
       progress: progress > 0 || task.progress !== undefined ? progress : undefined,
-      assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+      assigneeUserId: assigneeUserId || undefined,
+      assignee: getAssigneeSnapshot(assigneeUserId),
       comments: updatedComments,
       commentsCount: updatedComments.length
     };
     onUpdateTask(updated);
   };
 
-  const selectAssignee = (name: string) => {
-    setAssigneeName(name);
-    // Persist changes
-    let nextAssignee = undefined;
-    if (name) {
-      const match = TEAM_MEMBERS.find(m => m.name === name);
-      if (match) {
-        nextAssignee = { name: match.name, avatar: match.avatar };
-      }
-    }
+  const selectAssignee = (userId: string) => {
+    setAssigneeUserId(userId);
     const updated: Task = {
       ...task,
       title,
@@ -159,7 +127,8 @@ export default function TaskDetailModal({
       priority,
       dueDate,
       progress: progress > 0 || task.progress !== undefined ? progress : undefined,
-      assignee: nextAssignee,
+      assigneeUserId: userId || undefined,
+      assignee: getAssigneeSnapshot(userId),
       comments,
       commentsCount: comments.length
     };
@@ -184,7 +153,8 @@ export default function TaskDetailModal({
       priority,
       dueDate,
       progress: nextProgress,
-      assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+      assigneeUserId: assigneeUserId || undefined,
+      assignee: getAssigneeSnapshot(assigneeUserId),
       comments,
       commentsCount: comments.length
     };
@@ -305,7 +275,8 @@ export default function TaskDetailModal({
                       priority,
                       dueDate,
                       progress: p,
-                      assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+                      assigneeUserId: assigneeUserId || undefined,
+                      assignee: getAssigneeSnapshot(assigneeUserId),
                       comments,
                       commentsCount: comments.length
                     };
@@ -420,7 +391,8 @@ export default function TaskDetailModal({
                       priority,
                       dueDate,
                       progress: nextP,
-                      assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+                      assigneeUserId: assigneeUserId || undefined,
+                      assignee: getAssigneeSnapshot(assigneeUserId),
                       comments,
                       commentsCount: comments.length
                     };
@@ -455,7 +427,8 @@ export default function TaskDetailModal({
                       priority,
                       dueDate,
                       progress: progress,
-                      assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+                      assigneeUserId: assigneeUserId || undefined,
+                      assignee: getAssigneeSnapshot(assigneeUserId),
                       comments,
                       commentsCount: comments.length
                     };
@@ -505,7 +478,8 @@ export default function TaskDetailModal({
                           priority: p,
                           dueDate,
                           progress: progress,
-                          assignee: assigneeName ? TEAM_MEMBERS.find(m => m.name === assigneeName) : undefined,
+                          assigneeUserId: assigneeUserId || undefined,
+                          assignee: getAssigneeSnapshot(assigneeUserId),
                           comments,
                           commentsCount: comments.length
                         };
@@ -532,17 +506,17 @@ export default function TaskDetailModal({
                 <label className="text-[10px] font-bold text-wm-navy block">Responsible Assignee</label>
                 
                 {/* Visual Chosen Assignee Indicator */}
-                {assigneeName ? (
+                {selectedAssignee ? (
                   <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200">
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={TEAM_MEMBERS.find(m => m.name === assigneeName)?.avatar || ''}
-                        alt={assigneeName}
+                        src={selectedAssignee.avatar}
+                        alt={selectedAssignee.name}
                         className="w-7 h-7 rounded-full object-cover shrink-0"
                         referrerPolicy="no-referrer"
                       />
                       <div>
-                        <span className="text-[11px] font-bold text-wm-navy block leading-none">{assigneeName}</span>
+                        <span className="text-[11px] font-bold text-wm-navy block leading-none">{selectedAssignee.name}</span>
                         <span className="text-[9px] text-on-surface-variant tracking-tight font-sans">Active Assignee</span>
                       </div>
                     </div>
@@ -564,14 +538,14 @@ export default function TaskDetailModal({
 
                 {/* Grid Roster for Quick Assign */}
                 <div className="grid grid-cols-6 gap-1.5 pt-1.5 justify-items-center bg-white p-2 border border-gray-150 rounded-lg">
-                  {TEAM_MEMBERS.map((member) => (
+                  {assignableUsers.map((member) => (
                     <button
-                      key={member.name}
+                      key={member.id}
                       type="button"
-                      onClick={() => selectAssignee(member.name)}
+                      onClick={() => selectAssignee(member.id)}
                       title={`Assign to ${member.name}`}
                       className={`w-7.5 h-7.5 rounded-full overflow-hidden border-2 cursor-pointer transition-all ${
-                        assigneeName === member.name ? 'border-[#0072CE] scale-110 shadow-3xs' : 'border-transparent hover:scale-105 opacity-80 hover:opacity-100'
+                        assigneeUserId === member.id ? 'border-[#0072CE] scale-110 shadow-3xs' : 'border-transparent hover:scale-105 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <img

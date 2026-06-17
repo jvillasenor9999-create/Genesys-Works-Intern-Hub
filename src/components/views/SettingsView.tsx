@@ -26,12 +26,14 @@ import {
 import {
   UserRole,
   UserPermissions,
-  InternProfile,
   InternHardwarePreference,
   InternMentorPreference,
-  ManagedUser
+  ManagedUser,
+  ManagedUserRole
 } from '../../types';
 import PlatformDashboard from './PlatformDashboard';
+
+const DEFAULT_NEW_INTERN_AVATAR = 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=120';
 
 interface SettingsViewProps {
   userRole: UserRole;
@@ -44,12 +46,12 @@ interface SettingsViewProps {
   setUserHardwarePreference: (hw: InternHardwarePreference) => void;
   userMentorPreference: InternMentorPreference;
   setUserMentorPreference: (mentor: InternMentorPreference) => void;
-  internProfiles: InternProfile[];
-  setInternProfiles: React.Dispatch<React.SetStateAction<InternProfile[]>>;
-  activeInternProfileId: string;
-  setActiveInternProfileId: (profileId: string) => void;
+  activeInternUserId: string;
+  setActiveInternUserId: (userId: string) => void;
   managedUsers: ManagedUser[];
   setManagedUsers: React.Dispatch<React.SetStateAction<ManagedUser[]>>;
+  onAddInternUser: (user: ManagedUser) => void;
+  onManagedUserRoleChange: (userId: string, newRole: ManagedUserRole) => void;
   onResetWorkspace: () => void;
   onClearTasks: () => void;
   onLoadPresetTasks: (presetType: 'sprint' | 'ops' | 'minimal') => void;
@@ -69,12 +71,12 @@ export default function SettingsView({
   setUserHardwarePreference,
   userMentorPreference,
   setUserMentorPreference,
-  internProfiles,
-  setInternProfiles,
-  activeInternProfileId,
-  setActiveInternProfileId,
+  activeInternUserId,
+  setActiveInternUserId,
   managedUsers,
   setManagedUsers,
+  onAddInternUser,
+  onManagedUserRoleChange,
   onResetWorkspace,
   onClearTasks,
   onLoadPresetTasks,
@@ -86,16 +88,9 @@ export default function SettingsView({
   const activeSubTab = activeSubTabProp || localSubTab;
   const setActiveSubTab = setActiveSubTabProp || setLocalSubTab;
   
-  // Local state for administrative staff table simulator
-  const [admins, setAdmins] = useState<{ id: string; name: string; email: string; role: string; lastActive: string }[]>([
-    { id: '1', name: 'Marcus Chen', email: 'm.chen@genesysworks.org', role: 'Data & Analytics Mentor', lastActive: '2 mins ago' },
-    { id: '2', name: 'David Park', email: 'd.park@genesysworks.org', role: 'CX & Operations Leader', lastActive: '1 hour ago' },
-    { id: '3', name: 'Sarah Anderson', email: 's.anderson@genesysworks.org', role: 'Senior Program Director', lastActive: 'Yesterday' }
-  ]);
-  
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
-  const [newAdminRole, setNewAdminRole] = useState('Senior Mentor');
+  const [newAdminRole, setNewAdminRole] = useState<ManagedUserRole>('Technical Mentor');
   const [newInternName, setNewInternName] = useState('');
   const [newInternEmail, setNewInternEmail] = useState('');
   const [newInternMentorPreference, setNewInternMentorPreference] = useState<InternMentorPreference>('Marcus Chen');
@@ -120,7 +115,15 @@ export default function SettingsView({
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
-  const activeInternProfile = internProfiles.find(profile => profile.id === activeInternProfileId);
+  const summerInternUsers = managedUsers.filter(user => user.role === 'Summer Intern');
+  const supervisionUsers = managedUsers.filter(user => user.role !== 'Summer Intern');
+  const activeInternUser = summerInternUsers.find(user => user.id === activeInternUserId) ?? summerInternUsers[0];
+
+  const getDepartmentForSupervisorRole = (role: ManagedUserRole): ManagedUser['department'] => {
+    if (role === 'Administrator') return 'Operations';
+    if (role === 'Program Coordinator') return 'Career Development';
+    return 'Product Engineering';
+  };
 
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
@@ -142,58 +145,52 @@ export default function SettingsView({
     });
   };
 
-  const updateActiveInternProfile = (updates: Partial<InternProfile>) => {
-    setInternProfiles(prev => prev.map(profile => (
-      profile.id === activeInternProfileId ? { ...profile, ...updates } : profile
-    )));
-
-    if (!activeInternProfile) return;
-
-    const directoryUpdates: Partial<Pick<ManagedUser, 'name' | 'hardware'>> = {};
-    if (updates.name !== undefined) {
-      directoryUpdates.name = updates.name;
-    }
-    if (updates.hardwarePreference !== undefined) {
-      directoryUpdates.hardware = updates.hardwarePreference;
-    }
-
-    if (Object.keys(directoryUpdates).length === 0) return;
+  const updateActiveInternUser = (updates: Partial<Pick<ManagedUser, 'name' | 'email' | 'hardware' | 'mentorPreference'>>) => {
+    if (!activeInternUser) return;
 
     setManagedUsers(prev => prev.map(user => (
-      user.email.toLowerCase() === activeInternProfile.email.toLowerCase()
-        ? { ...user, ...directoryUpdates }
-        : user
+      user.id === activeInternUser.id ? { ...user, ...updates } : user
     )));
   };
 
-  const handleActiveInternProfileChange = (profileId: string) => {
-    const selectedProfile = internProfiles.find(profile => profile.id === profileId);
-    if (!selectedProfile) return;
+  const handleActiveInternProfileChange = (userId: string) => {
+    if (userRole !== 'admin') {
+      triggerToast('Blocked: Administrator Mode is required to switch active intern profiles.');
+      return;
+    }
 
-    setActiveInternProfileId(selectedProfile.id);
-    setUserNickname(selectedProfile.name);
-    setUserMentorPreference(selectedProfile.mentorPreference);
-    setUserHardwarePreference(selectedProfile.hardwarePreference);
-    addAuditLog(`Switched active intern profile to ${selectedProfile.name}`, 'PROFILE');
-    triggerToast(`Active intern profile: ${selectedProfile.name}`);
+    const selectedUser = summerInternUsers.find(user => user.id === userId);
+    if (!selectedUser) return;
+
+    setActiveInternUserId(selectedUser.id);
+    setUserNickname(selectedUser.name);
+    setUserMentorPreference(selectedUser.mentorPreference ?? 'Marcus Chen');
+    setUserHardwarePreference(selectedUser.hardware);
+    addAuditLog(`Switched active intern profile to ${selectedUser.name}`, 'PROFILE');
+    triggerToast(`Active intern profile: ${selectedUser.name}`);
   };
 
   const handleInternNameChange = (name: string) => {
     setUserNickname(name);
-    updateActiveInternProfile({ name });
+    updateActiveInternUser({ name });
     addAuditLog(`Set screen name nickname to "${name}"`, 'PROFILE');
+  };
+
+  const handleInternEmailChange = (email: string) => {
+    updateActiveInternUser({ email });
+    addAuditLog(`Updated intern email reference to "${email}"`, 'PROFILE');
   };
 
   const handleMentorPreferenceChange = (mentorPreference: InternMentorPreference) => {
     setUserMentorPreference(mentorPreference);
-    updateActiveInternProfile({ mentorPreference });
+    updateActiveInternUser({ mentorPreference });
     addAuditLog(`Swapped mentor buddy advisor reference to "${mentorPreference}"`, 'PROFILE');
     triggerToast(`Assigned buddy changed to: ${mentorPreference}`);
   };
 
   const handleHardwarePreferenceChange = (hardwarePreference: InternHardwarePreference) => {
     setUserHardwarePreference(hardwarePreference);
-    updateActiveInternProfile({ hardwarePreference });
+    updateActiveInternUser({ hardware: hardwarePreference });
     addAuditLog(`Updated station equipment selection: ${hardwarePreference}`, 'PROFILE');
     triggerToast(`Assigned equipment updated: ${hardwarePreference === 'MacBook Pro' ? 'MacBook Pro 14"' : 'Dell/ThinkPad workstation'}`);
   };
@@ -215,8 +212,7 @@ export default function SettingsView({
     }
 
     const normalizedEmail = trimmedEmail.toLowerCase();
-    const isExistingUser = internProfiles.some(profile => profile.email.toLowerCase() === normalizedEmail) ||
-      managedUsers.some(user => user.email.toLowerCase() === normalizedEmail);
+    const isExistingUser = managedUsers.some(user => user.email.toLowerCase() === normalizedEmail);
 
     if (isExistingUser) {
       triggerToast('That email already exists in the intern profiles or user directory.');
@@ -224,32 +220,22 @@ export default function SettingsView({
     }
 
     const createdAt = Date.now();
-    const newInternProfile: InternProfile = {
-      id: `intern-${createdAt}`,
-      name: trimmedName,
-      email: trimmedEmail,
-      mentorPreference: newInternMentorPreference,
-      hardwarePreference: newInternHardwarePreference
-    };
     const newManagedUser: ManagedUser = {
       id: `usr-${createdAt}`,
-      name: newInternProfile.name,
-      email: newInternProfile.email,
+      name: trimmedName,
+      email: trimmedEmail,
       role: 'Summer Intern',
       department: 'Product Engineering',
       status: 'Provisioning',
       lastLogin: 'Never',
-      hardware: newInternProfile.hardwarePreference
+      hardware: newInternHardwarePreference,
+      avatar: DEFAULT_NEW_INTERN_AVATAR,
+      mentorPreference: newInternMentorPreference
     };
 
-    setInternProfiles(prev => [...prev, newInternProfile]);
-    setManagedUsers(prev => [...prev, newManagedUser]);
-    setActiveInternProfileId(newInternProfile.id);
-    setUserNickname(newInternProfile.name);
-    setUserMentorPreference(newInternProfile.mentorPreference);
-    setUserHardwarePreference(newInternProfile.hardwarePreference);
-    addAuditLog(`Added intern profile and directory user: ${newInternProfile.name}`, 'PROFILE');
-    triggerToast(`Intern user added to profiles and directory: ${newInternProfile.name}`);
+    onAddInternUser(newManagedUser);
+    addAuditLog(`Added intern profile and directory user: ${newManagedUser.name}`, 'PROFILE');
+    triggerToast(`Intern user added to profiles and directory: ${newManagedUser.name}`);
     setNewInternName('');
     setNewInternEmail('');
     setNewInternMentorPreference('Marcus Chen');
@@ -258,26 +244,46 @@ export default function SettingsView({
 
   const handleAddAdmin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminName.trim() || !newAdminEmail.trim()) return;
 
     if (userRole !== 'admin') {
       triggerToast('Blocked: Administrator simulated role required to add supervisors!');
       return;
     }
 
-    const newAdmin = {
-      id: `admin-${Date.now()}`,
-      name: newAdminName,
-      email: newAdminEmail,
+    const trimmedName = newAdminName.trim();
+    const trimmedEmail = newAdminEmail.trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      triggerToast('Enter the supervisor name and email before adding staff.');
+      return;
+    }
+
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    const isExistingUser = managedUsers.some(user => user.email.toLowerCase() === normalizedEmail);
+
+    if (isExistingUser) {
+      triggerToast('That email already exists in the user directory.');
+      return;
+    }
+
+    const newAdmin: ManagedUser = {
+      id: `usr-${Date.now()}`,
+      name: trimmedName,
+      email: trimmedEmail,
       role: newAdminRole,
-      lastActive: 'Just now'
+      department: getDepartmentForSupervisorRole(newAdminRole),
+      status: 'Active',
+      lastLogin: 'Just now',
+      hardware: 'MacBook Pro',
+      avatar: DEFAULT_NEW_INTERN_AVATAR
     };
 
-    setAdmins(prev => [...prev, newAdmin]);
+    setManagedUsers(prev => [...prev, newAdmin]);
     addAuditLog(`Added supervising administrator: ${newAdmin.name}`, 'SECURITY');
     triggerToast(`Supervisor registered: ${newAdmin.name}`);
     setNewAdminName('');
     setNewAdminEmail('');
+    setNewAdminRole('Technical Mentor');
   };
 
   const handleRemoveAdmin = (id: string, name: string) => {
@@ -285,7 +291,7 @@ export default function SettingsView({
       triggerToast('Blocked: Simulated Admin role required to delete supervisors!');
       return;
     }
-    setAdmins(prev => prev.filter(a => a.id !== id));
+    setManagedUsers(prev => prev.filter(user => user.id !== id));
     addAuditLog(`Removed supervising administrator: ${name}`, 'SECURITY');
     triggerToast(`Removed administrator: ${name}`);
   };
@@ -455,17 +461,24 @@ export default function SettingsView({
                   <div className="md:col-span-2 space-y-1 text-left">
                     <label className="text-[10px] font-mono text-[#005fae] uppercase font-bold">Active Intern Profile</label>
                     <select
-                      value={activeInternProfileId}
+                      value={activeInternUser?.id ?? ''}
+                      disabled={userRole !== 'admin'}
                       onChange={(e) => handleActiveInternProfileChange(e.target.value)}
-                      className="w-full text-xs p-3 bg-white border border-[#E1E4E8] rounded-lg focus:border-wm-royal cursor-pointer outline-none font-sans font-medium"
+                      className={`w-full text-xs p-3 bg-white border border-[#E1E4E8] rounded-lg focus:border-wm-royal outline-none font-sans font-medium ${
+                        userRole !== 'admin' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                      }`}
                     >
-                      {internProfiles.map(profile => (
-                        <option key={profile.id} value={profile.id}>
-                          {profile.name} - {profile.email}
+                      {summerInternUsers.map(user => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} - {user.email}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-on-surface-variant">Choose which simulated intern profile is active across the portal.</p>
+                    <p className="text-[10px] text-on-surface-variant">
+                      {userRole === 'admin'
+                        ? 'Choose which simulated intern profile is active across the portal.'
+                        : 'Administrator Mode is required to switch active intern profiles.'}
+                    </p>
                   </div>
 
                   {/* Name field */}
@@ -478,6 +491,18 @@ export default function SettingsView({
                       onChange={(e) => handleInternNameChange(e.target.value)}
                     />
                     <p className="text-[10px] text-on-surface-variant">This will show as your display name in lists and shoutouts.</p>
+                  </div>
+
+                  {/* Email field */}
+                  <div className="space-y-1 text-left">
+                    <label className="text-[10px] font-mono text-[#005fae] uppercase font-bold">Intern Email Reference</label>
+                    <input
+                      type="email"
+                      className="w-full text-xs p-3 bg-white border border-[#E1E4E8] rounded-lg focus:border-wm-royal outline-none font-mono font-medium"
+                      value={activeInternUser?.email ?? ''}
+                      onChange={(e) => handleInternEmailChange(e.target.value)}
+                    />
+                    <p className="text-[10px] text-on-surface-variant">This updates the directory record for the active intern.</p>
                   </div>
 
                   {/* Mentor buddy select */}
@@ -799,12 +824,12 @@ export default function SettingsView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {admins.map(person => (
+                      {supervisionUsers.map(person => (
                         <tr key={person.id} className="hover:bg-neutral-50/50">
                           <td className="p-3 text-left font-bold text-wm-navy">{person.name}</td>
                           <td className="p-3 text-left font-sans text-on-surface-variant">{person.role}</td>
                           <td className="p-3 text-left font-mono text-on-surface-variant">{person.email}</td>
-                          <td className="p-3 text-left font-mono text-status-success">{person.lastActive}</td>
+                          <td className="p-3 text-left font-mono text-status-success">{person.lastLogin}</td>
                           <td className="p-3 text-right">
                             <button
                               id={`remove-admin-btn-${person.id}`}
@@ -819,6 +844,13 @@ export default function SettingsView({
                           </td>
                         </tr>
                       ))}
+                      {supervisionUsers.length === 0 && (
+                        <tr>
+                          <td className="p-6 text-center text-on-surface-variant font-mono" colSpan={5}>
+                            No supervisor staff users found in the shared directory.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -855,12 +887,12 @@ export default function SettingsView({
                       <select
                         disabled={userRole !== 'admin'}
                         value={newAdminRole}
-                        onChange={(e) => setNewAdminRole(e.target.value)}
+                        onChange={(e) => setNewAdminRole(e.target.value as ManagedUserRole)}
                         className="text-xs p-2.5 bg-white border border-[#E1E4E8] rounded outline-none cursor-pointer flex-1"
                       >
-                        <option value="Executive Mentor">Executive Mentor</option>
-                        <option value="Program Coordinator">Program Advisor</option>
-                        <option value="IT Hub Administrator">IT Administrator</option>
+                        <option value="Technical Mentor">Technical Mentor</option>
+                        <option value="Program Coordinator">Program Coordinator</option>
+                        <option value="Administrator">Administrator</option>
                       </select>
                       <button
                         id="add-admin-form-submit"
@@ -993,6 +1025,7 @@ export default function SettingsView({
                   userNickname={userNickname}
                   managedUsers={managedUsers}
                   setManagedUsers={setManagedUsers}
+                  onUserRoleChange={onManagedUserRoleChange}
                 />
               ) : (
                 <div className="bg-white border border-[#E1E4E8] rounded-xl p-8 text-center space-y-4">

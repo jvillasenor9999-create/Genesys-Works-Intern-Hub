@@ -29,7 +29,7 @@ import {
   Activity,
   UserCheck
 } from 'lucide-react';
-import { Task, UserRole, UserPermissions } from '../../types';
+import { Task, UserRole, UserPermissions, ManagedUser } from '../../types';
 import TaskDetailModal from '../TaskDetailModal';
 
 interface ProjectBoardViewProps {
@@ -41,6 +41,8 @@ interface ProjectBoardViewProps {
   setSubTab?: (subTab: 'board' | 'backlog' | 'timeline') => void;
   userRole?: UserRole;
   permissions?: UserPermissions;
+  managedUsers: ManagedUser[];
+  activeInternUserId: string;
 }
 
 export default function ProjectBoardView({
@@ -56,9 +58,27 @@ export default function ProjectBoardView({
     allowInternsToCreateFAQ: true,
     allowInternsToSyncMeetings: true,
     allowInternsToSelfApproveMilestones: true
-  }
+  },
+  managedUsers,
+  activeInternUserId
 }: ProjectBoardViewProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const summerInternUsers = managedUsers.filter(user => user.role === 'Summer Intern');
+  const activeInternUser = summerInternUsers.find(user => user.id === activeInternUserId) ?? summerInternUsers[0];
+
+  const getTaskAssignee = (task: Task) => {
+    const assignedUser = task.assigneeUserId
+      ? managedUsers.find(user => user.id === task.assigneeUserId)
+      : undefined;
+
+    return assignedUser
+      ? { name: assignedUser.name, avatar: assignedUser.avatar }
+      : task.assignee;
+  };
+
+  const getUserAssignee = (user?: ManagedUser) => (
+    user ? { name: user.name, avatar: user.avatar } : undefined
+  );
 
   // Drag and drop states for Kanban Board
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -197,10 +217,8 @@ export default function ProjectBoardView({
           status: 'progress',
           priority: 'Medium',
           dueDate: 'Tomorrow',
-          assignee: {
-            name: 'Alex Rivera',
-            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8'
-          }
+          assigneeUserId: activeInternUser?.id,
+          assignee: getUserAssignee(activeInternUser)
         };
       }
       return t;
@@ -223,7 +241,9 @@ export default function ProjectBoardView({
       comments: [],
       startDaysOffset: 4,
       durationDays: 6,
-      progress: 0
+      progress: 0,
+      assigneeUserId: activeInternUser?.id,
+      assignee: getUserAssignee(activeInternUser)
     };
 
     setTasks(prev => [newTask, ...prev]);
@@ -341,7 +361,8 @@ export default function ProjectBoardView({
                   >
                     {columnTasks.map((task) => {
                       const isOpportunity = task.type === 'Opportunity';
-                      const hasAssignee = !!task.assignee;
+                      const taskAssignee = getTaskAssignee(task);
+                      const hasAssignee = !!taskAssignee;
                       const isDone = task.status === 'done';
 
                       return (
@@ -414,10 +435,10 @@ export default function ProjectBoardView({
 
                             {/* Assignee Avatar / Claim prompt */}
                             {hasAssignee ? (
-                              <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 ml-1.5 shrink-0" title={task.assignee?.name}>
-                                <img 
-                                  src={task.assignee?.avatar} 
-                                  alt={task.assignee?.name} 
+                              <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 ml-1.5 shrink-0" title={taskAssignee?.name}>
+                                <img
+                                  src={taskAssignee?.avatar}
+                                  alt={taskAssignee?.name}
                                   className="w-full h-full object-cover font-sans"
                                   referrerPolicy="no-referrer"
                                 />
@@ -574,12 +595,15 @@ export default function ProjectBoardView({
                     <p className="text-sm">No tasks committed to the active sprint yet.</p>
                   </div>
                 ) : (
-                  sprintTasks.map(task => (
-                    <div 
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      className="group border border-[#E1E4E8] hover:border-wm-royal bg-[#FAFBCF]/5 hover:bg-white rounded-lg p-3.5 transition-all cursor-pointer relative"
-                    >
+                  sprintTasks.map(task => {
+                    const taskAssignee = getTaskAssignee(task);
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className="group border border-[#E1E4E8] hover:border-wm-royal bg-[#FAFBCF]/5 hover:bg-white rounded-lg p-3.5 transition-all cursor-pointer relative"
+                      >
                       {/* Three option buttons on top right of backlog cell */}
                       <div className="absolute top-2.5 right-3.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                         <button
@@ -640,17 +664,18 @@ export default function ProjectBoardView({
                       <div className="flex items-center justify-between mt-3 text-[10px] text-on-surface-variant border-t border-[#F8F9FA] pt-2">
                         <span className="font-mono">Due: {task.dueDate}</span>
                         
-                        {task.assignee ? (
+                        {taskAssignee ? (
                           <div className="flex items-center gap-1.5">
-                            <img src={task.assignee.avatar} className="w-4 h-4 rounded-full" referrerPolicy="no-referrer" />
-                            <span className="font-medium text-on-surface text-[9.5px]">{task.assignee.name}</span>
+                            <img src={taskAssignee.avatar} className="w-4 h-4 rounded-full" referrerPolicy="no-referrer" />
+                            <span className="font-medium text-on-surface text-[9.5px]">{taskAssignee.name}</span>
                           </div>
                         ) : (
                           <span className="text-[9px] font-mono text-neutral-400">Unassigned</span>
                         )}
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -967,6 +992,8 @@ export default function ProjectBoardView({
           onClose={() => setSelectedTask(null)}
           onUpdateTask={handleUpdateTaskInBoard}
           onDeleteTask={handleDeleteTaskFromBoard}
+          assignableUsers={summerInternUsers}
+          currentUser={activeInternUser}
         />
       )}
 
