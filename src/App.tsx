@@ -2,7 +2,19 @@ import React, { useState } from 'react';
 import { X, CheckCircle2, Sparkles, Laptop, Smartphone, Mail, Settings, HelpCircle, LifeBuoy } from 'lucide-react';
 
 // Imports types & initial data
-import { Task, Shoutout, RoadmapTask, FaqItem, Meeting, UserRole, UserPermissions } from './types';
+import {
+  Task,
+  Shoutout,
+  RoadmapTask,
+  FaqItem,
+  Meeting,
+  UserRole,
+  UserPermissions,
+  InternProfile,
+  InternHardwarePreference,
+  InternMentorPreference,
+  ManagedUser
+} from './types';
 import { 
   INITIAL_TASKS, 
   SHOUTOUTS, 
@@ -32,6 +44,25 @@ import OnboardingView from './components/views/OnboardingView';
 import SettingsView from './components/views/SettingsView';
 import InternsDashboard from './components/views/InternsDashboard';
 
+const DEFAULT_INTERN_PROFILE: InternProfile = {
+  id: 'intern-alex-rivera',
+  name: 'Alex Rivera',
+  email: 'a.rivera@genesysworks.org',
+  hardwarePreference: 'MacBook Pro',
+  mentorPreference: 'Marcus Chen'
+};
+
+const DEFAULT_MANAGED_USERS: ManagedUser[] = [
+  { id: 'usr-1', name: 'Alex Rivera', email: 'a.rivera@genesysworks.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Active', lastLogin: 'Just now', hardware: 'MacBook Pro' },
+  { id: 'usr-2', name: 'Jordan Smith', email: 'j.smith@genesysworks.org', role: 'Summer Intern', department: 'Data & Analytics', status: 'Active', lastLogin: '12 mins ago', hardware: 'Lenovo ThinkPad' },
+  { id: 'usr-3', name: 'Marcus Chen', email: 'm.chen@westmonroe.com', role: 'Technical Mentor', department: 'Data & Analytics', status: 'Active', lastLogin: '1 hour ago', hardware: 'MacBook Pro' },
+  { id: 'usr-4', name: 'David Park', email: 'd.park@westmonroe.com', role: 'Technical Mentor', department: 'Customer Experience', status: 'Active', lastLogin: '3 hours ago', hardware: 'Lenovo ThinkPad' },
+  { id: 'usr-5', name: 'Sarah Anderson', email: 's.anderson@genesysworks.org', role: 'Program Coordinator', department: 'Career Development', status: 'Active', lastLogin: 'Yesterday', hardware: 'Lenovo ThinkPad' },
+  { id: 'usr-6', name: 'Samantha Vance', email: 's.vance@genesysworks.org', role: 'Administrator', department: 'Operations', status: 'Active', lastLogin: '2 days ago', hardware: 'MacBook Pro' },
+  { id: 'usr-7', name: 'Tyler Durden', email: 't.durden@genesysworks.org', role: 'Summer Intern', department: 'Operations', status: 'On Vacation', lastLogin: 'Last week', hardware: 'Lenovo ThinkPad' },
+  { id: 'usr-8', name: 'John Doe', email: 'j.doe@unprovisioned.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Provisioning', lastLogin: 'Never', hardware: 'MacBook Pro' }
+];
+
 export default function App() {
   // Navigation Routing State
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -57,8 +88,11 @@ export default function App() {
 
   // Profile Settings customizable states
   const [userNickname, setUserNickname] = useState<string>('Alex Rivera');
-  const [userHardwarePreference, setUserHardwarePreference] = useState<string>('MacBook Pro');
-  const [userMentorPreference, setUserMentorPreference] = useState<string>('Marcus Chen');
+  const [userHardwarePreference, setUserHardwarePreference] = useState<InternHardwarePreference>('MacBook Pro');
+  const [userMentorPreference, setUserMentorPreference] = useState<InternMentorPreference>('Marcus Chen');
+  const [internProfiles, setInternProfiles] = useState<InternProfile[]>([DEFAULT_INTERN_PROFILE]);
+  const [activeInternProfileId, setActiveInternProfileId] = useState<string>(DEFAULT_INTERN_PROFILE.id);
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>(DEFAULT_MANAGED_USERS);
   const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'permissions' | 'admin-access' | 'database' | 'platform'>('profile');
 
   // Multi-view and Simulation access controls
@@ -80,6 +114,9 @@ export default function App() {
     setUserNickname('Alex Rivera');
     setUserHardwarePreference('MacBook Pro');
     setUserMentorPreference('Marcus Chen');
+    setInternProfiles([DEFAULT_INTERN_PROFILE]);
+    setActiveInternProfileId(DEFAULT_INTERN_PROFILE.id);
+    setManagedUsers(DEFAULT_MANAGED_USERS);
     setUserRole('intern');
     setPermissions({
       allowInternsToDeleteTasks: false,
@@ -310,6 +347,12 @@ export default function App() {
             setUserHardwarePreference={setUserHardwarePreference}
             userMentorPreference={userMentorPreference}
             setUserMentorPreference={setUserMentorPreference}
+            internProfiles={internProfiles}
+            setInternProfiles={setInternProfiles}
+            activeInternProfileId={activeInternProfileId}
+            setActiveInternProfileId={setActiveInternProfileId}
+            managedUsers={managedUsers}
+            setManagedUsers={setManagedUsers}
             onResetWorkspace={handleResetWorkspace}
             onClearTasks={() => setTasks([])}
             onLoadPresetTasks={handleLoadPresetTasks}
