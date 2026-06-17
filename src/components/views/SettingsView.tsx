@@ -23,7 +23,14 @@ import {
   Trash2,
   Info
 } from 'lucide-react';
-import { UserRole, UserPermissions } from '../../types';
+import {
+  UserRole,
+  UserPermissions,
+  InternProfile,
+  InternHardwarePreference,
+  InternMentorPreference,
+  ManagedUser
+} from '../../types';
 import PlatformDashboard from './PlatformDashboard';
 
 interface SettingsViewProps {
@@ -33,10 +40,16 @@ interface SettingsViewProps {
   setPermissions: React.Dispatch<React.SetStateAction<UserPermissions>>;
   userNickname: string;
   setUserNickname: (name: string) => void;
-  userHardwarePreference: string;
-  setUserHardwarePreference: (hw: string) => void;
-  userMentorPreference: string;
-  setUserMentorPreference: (mentor: string) => void;
+  userHardwarePreference: InternHardwarePreference;
+  setUserHardwarePreference: (hw: InternHardwarePreference) => void;
+  userMentorPreference: InternMentorPreference;
+  setUserMentorPreference: (mentor: InternMentorPreference) => void;
+  internProfiles: InternProfile[];
+  setInternProfiles: React.Dispatch<React.SetStateAction<InternProfile[]>>;
+  activeInternProfileId: string;
+  setActiveInternProfileId: (profileId: string) => void;
+  managedUsers: ManagedUser[];
+  setManagedUsers: React.Dispatch<React.SetStateAction<ManagedUser[]>>;
   onResetWorkspace: () => void;
   onClearTasks: () => void;
   onLoadPresetTasks: (presetType: 'sprint' | 'ops' | 'minimal') => void;
@@ -56,6 +69,12 @@ export default function SettingsView({
   setUserHardwarePreference,
   userMentorPreference,
   setUserMentorPreference,
+  internProfiles,
+  setInternProfiles,
+  activeInternProfileId,
+  setActiveInternProfileId,
+  managedUsers,
+  setManagedUsers,
   onResetWorkspace,
   onClearTasks,
   onLoadPresetTasks,
@@ -77,6 +96,10 @@ export default function SettingsView({
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminRole, setNewAdminRole] = useState('Senior Mentor');
+  const [newInternName, setNewInternName] = useState('');
+  const [newInternEmail, setNewInternEmail] = useState('');
+  const [newInternMentorPreference, setNewInternMentorPreference] = useState<InternMentorPreference>('Marcus Chen');
+  const [newInternHardwarePreference, setNewInternHardwarePreference] = useState<InternHardwarePreference>('MacBook Pro');
 
   // Audit Logs database simulator
   const [auditLogs, setAuditLogs] = useState<{ id: string; timestamp: string; action: string; category: string; user: string }[]>([
@@ -97,6 +120,8 @@ export default function SettingsView({
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
+  const activeInternProfile = internProfiles.find(profile => profile.id === activeInternProfileId);
+
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
     addAuditLog(`Swapped active workspace simulation role to ${role.toUpperCase()}`, 'SECURITY');
@@ -115,6 +140,120 @@ export default function SettingsView({
       triggerToast(`Permission updated! ${key} is now ${updated[key] ? 'ENABLED' : 'DISABLED'}`);
       return updated;
     });
+  };
+
+  const updateActiveInternProfile = (updates: Partial<InternProfile>) => {
+    setInternProfiles(prev => prev.map(profile => (
+      profile.id === activeInternProfileId ? { ...profile, ...updates } : profile
+    )));
+
+    if (!activeInternProfile) return;
+
+    const directoryUpdates: Partial<Pick<ManagedUser, 'name' | 'hardware'>> = {};
+    if (updates.name !== undefined) {
+      directoryUpdates.name = updates.name;
+    }
+    if (updates.hardwarePreference !== undefined) {
+      directoryUpdates.hardware = updates.hardwarePreference;
+    }
+
+    if (Object.keys(directoryUpdates).length === 0) return;
+
+    setManagedUsers(prev => prev.map(user => (
+      user.email.toLowerCase() === activeInternProfile.email.toLowerCase()
+        ? { ...user, ...directoryUpdates }
+        : user
+    )));
+  };
+
+  const handleActiveInternProfileChange = (profileId: string) => {
+    const selectedProfile = internProfiles.find(profile => profile.id === profileId);
+    if (!selectedProfile) return;
+
+    setActiveInternProfileId(selectedProfile.id);
+    setUserNickname(selectedProfile.name);
+    setUserMentorPreference(selectedProfile.mentorPreference);
+    setUserHardwarePreference(selectedProfile.hardwarePreference);
+    addAuditLog(`Switched active intern profile to ${selectedProfile.name}`, 'PROFILE');
+    triggerToast(`Active intern profile: ${selectedProfile.name}`);
+  };
+
+  const handleInternNameChange = (name: string) => {
+    setUserNickname(name);
+    updateActiveInternProfile({ name });
+    addAuditLog(`Set screen name nickname to "${name}"`, 'PROFILE');
+  };
+
+  const handleMentorPreferenceChange = (mentorPreference: InternMentorPreference) => {
+    setUserMentorPreference(mentorPreference);
+    updateActiveInternProfile({ mentorPreference });
+    addAuditLog(`Swapped mentor buddy advisor reference to "${mentorPreference}"`, 'PROFILE');
+    triggerToast(`Assigned buddy changed to: ${mentorPreference}`);
+  };
+
+  const handleHardwarePreferenceChange = (hardwarePreference: InternHardwarePreference) => {
+    setUserHardwarePreference(hardwarePreference);
+    updateActiveInternProfile({ hardwarePreference });
+    addAuditLog(`Updated station equipment selection: ${hardwarePreference}`, 'PROFILE');
+    triggerToast(`Assigned equipment updated: ${hardwarePreference === 'MacBook Pro' ? 'MacBook Pro 14"' : 'Dell/ThinkPad workstation'}`);
+  };
+
+  const handleAddInternProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (userRole !== 'admin') {
+      triggerToast('Blocked: Administrator simulated role required to add intern users!');
+      return;
+    }
+
+    const trimmedName = newInternName.trim();
+    const trimmedEmail = newInternEmail.trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      triggerToast('Enter the intern name and email before adding a user.');
+      return;
+    }
+
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    const isExistingUser = internProfiles.some(profile => profile.email.toLowerCase() === normalizedEmail) ||
+      managedUsers.some(user => user.email.toLowerCase() === normalizedEmail);
+
+    if (isExistingUser) {
+      triggerToast('That email already exists in the intern profiles or user directory.');
+      return;
+    }
+
+    const createdAt = Date.now();
+    const newInternProfile: InternProfile = {
+      id: `intern-${createdAt}`,
+      name: trimmedName,
+      email: trimmedEmail,
+      mentorPreference: newInternMentorPreference,
+      hardwarePreference: newInternHardwarePreference
+    };
+    const newManagedUser: ManagedUser = {
+      id: `usr-${createdAt}`,
+      name: newInternProfile.name,
+      email: newInternProfile.email,
+      role: 'Summer Intern',
+      department: 'Product Engineering',
+      status: 'Provisioning',
+      lastLogin: 'Never',
+      hardware: newInternProfile.hardwarePreference
+    };
+
+    setInternProfiles(prev => [...prev, newInternProfile]);
+    setManagedUsers(prev => [...prev, newManagedUser]);
+    setActiveInternProfileId(newInternProfile.id);
+    setUserNickname(newInternProfile.name);
+    setUserMentorPreference(newInternProfile.mentorPreference);
+    setUserHardwarePreference(newInternProfile.hardwarePreference);
+    addAuditLog(`Added intern profile and directory user: ${newInternProfile.name}`, 'PROFILE');
+    triggerToast(`Intern user added to profiles and directory: ${newInternProfile.name}`);
+    setNewInternName('');
+    setNewInternEmail('');
+    setNewInternMentorPreference('Marcus Chen');
+    setNewInternHardwarePreference('MacBook Pro');
   };
 
   const handleAddAdmin = (e: React.FormEvent) => {
@@ -312,6 +451,23 @@ export default function SettingsView({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Active profile selector */}
+                  <div className="md:col-span-2 space-y-1 text-left">
+                    <label className="text-[10px] font-mono text-[#005fae] uppercase font-bold">Active Intern Profile</label>
+                    <select
+                      value={activeInternProfileId}
+                      onChange={(e) => handleActiveInternProfileChange(e.target.value)}
+                      className="w-full text-xs p-3 bg-white border border-[#E1E4E8] rounded-lg focus:border-wm-royal cursor-pointer outline-none font-sans font-medium"
+                    >
+                      {internProfiles.map(profile => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name} - {profile.email}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-on-surface-variant">Choose which simulated intern profile is active across the portal.</p>
+                  </div>
+
                   {/* Name field */}
                   <div className="space-y-1 text-left">
                     <label className="text-[10px] font-mono text-[#005fae] uppercase font-bold">Registered Intern Nickname</label>
@@ -319,10 +475,7 @@ export default function SettingsView({
                       type="text"
                       className="w-full text-xs p-3 bg-[#FAFBCF]/10 border border-[#E1E4E8] rounded-lg focus:border-wm-royal outline-none font-sans font-medium"
                       value={userNickname}
-                      onChange={(e) => {
-                        setUserNickname(e.target.value);
-                        addAuditLog(`Set screen name nickname to "${e.target.value}"`, 'PROFILE');
-                      }}
+                      onChange={(e) => handleInternNameChange(e.target.value)}
                     />
                     <p className="text-[10px] text-on-surface-variant">This will show as your display name in lists and shoutouts.</p>
                   </div>
@@ -333,11 +486,7 @@ export default function SettingsView({
                     <select
                       className="w-full text-xs p-3 bg-white border border-[#E1E4E8] rounded-lg focus:border-wm-royal cursor-pointer outline-none font-sans font-medium"
                       value={userMentorPreference}
-                      onChange={(e) => {
-                        setUserMentorPreference(e.target.value);
-                        addAuditLog(`Swapped mentor buddy advisor reference to "${e.target.value}"`, 'PROFILE');
-                        triggerToast(`Assigned buddy changed to: ${e.target.value}`);
-                      }}
+                      onChange={(e) => handleMentorPreferenceChange(e.target.value as InternMentorPreference)}
                     >
                       <option value="Marcus Chen">Marcus Chen (Data & Analytics Mentor)</option>
                       <option value="David Park">David Park (Customer Experience Leader)</option>
@@ -352,11 +501,7 @@ export default function SettingsView({
                     <div className="flex flex-col sm:flex-row gap-4 pt-1">
                       <button
                         type="button"
-                        onClick={() => {
-                          setUserHardwarePreference('MacBook Pro');
-                          addAuditLog('Updated station equipment selection: Apple MacBook Pro', 'PROFILE');
-                          triggerToast('Assigned equipment updated: MacBook Pro 14"');
-                        }}
+                        onClick={() => handleHardwarePreferenceChange('MacBook Pro')}
                         className={`flex-1 p-4 border rounded-xl flex items-center gap-3 transition-all ${
                           userHardwarePreference === 'MacBook Pro'
                             ? 'border-wm-royal bg-blue-50/50 text-[#001c3a] ring-2 ring-wm-royal/10'
@@ -374,11 +519,7 @@ export default function SettingsView({
 
                       <button
                         type="button"
-                        onClick={() => {
-                          setUserHardwarePreference('Lenovo ThinkPad');
-                          addAuditLog('Updated station equipment selection: PC Workstation', 'PROFILE');
-                          triggerToast('Assigned equipment updated: Dell/ThinkPad workstation');
-                        }}
+                        onClick={() => handleHardwarePreferenceChange('Lenovo ThinkPad')}
                         className={`flex-1 p-4 border rounded-xl flex items-center gap-3 transition-all ${
                           userHardwarePreference === 'Lenovo ThinkPad'
                             ? 'border-wm-royal bg-blue-50/50 text-[#001c3a] ring-2 ring-wm-royal/10'
@@ -396,6 +537,73 @@ export default function SettingsView({
                     </div>
                   </div>
                 </div>
+
+                <form
+                  onSubmit={handleAddInternProfile}
+                  className={`mt-8 pt-6 border-t border-[#F1F4F6] space-y-4 ${
+                    userRole !== 'admin' ? 'opacity-70' : ''
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Add Intern User</span>
+                      <p className="text-[11px] text-on-surface-variant">Register a new in-memory intern profile and make it active immediately.</p>
+                    </div>
+                    {userRole !== 'admin' && (
+                      <span className="text-[10px] font-mono font-bold uppercase text-red-500 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" />
+                        Requires Administrator Mode
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                    <input
+                      type="text"
+                      placeholder="e.g. Taylor Morgan"
+                      disabled={userRole !== 'admin'}
+                      value={newInternName}
+                      onChange={(e) => setNewInternName(e.target.value)}
+                      className="text-xs p-2.5 bg-white border border-[#E1E4E8] rounded outline-none w-full disabled:cursor-not-allowed"
+                    />
+                    <input
+                      type="email"
+                      placeholder="e.g. t.morgan@genesysworks.org"
+                      disabled={userRole !== 'admin'}
+                      value={newInternEmail}
+                      onChange={(e) => setNewInternEmail(e.target.value)}
+                      className="text-xs p-2.5 bg-white border border-[#E1E4E8] rounded outline-none w-full font-mono disabled:cursor-not-allowed"
+                    />
+                    <select
+                      disabled={userRole !== 'admin'}
+                      value={newInternMentorPreference}
+                      onChange={(e) => setNewInternMentorPreference(e.target.value as InternMentorPreference)}
+                      className="text-xs p-2.5 bg-white border border-[#E1E4E8] rounded outline-none cursor-pointer w-full disabled:cursor-not-allowed"
+                    >
+                      <option value="Marcus Chen">Marcus Chen</option>
+                      <option value="David Park">David Park</option>
+                      <option value="Sarah Anderson">Sarah Anderson</option>
+                    </select>
+                    <select
+                      disabled={userRole !== 'admin'}
+                      value={newInternHardwarePreference}
+                      onChange={(e) => setNewInternHardwarePreference(e.target.value as InternHardwarePreference)}
+                      className="text-xs p-2.5 bg-white border border-[#E1E4E8] rounded outline-none cursor-pointer w-full disabled:cursor-not-allowed"
+                    >
+                      <option value="MacBook Pro">MacBook Pro</option>
+                      <option value="Lenovo ThinkPad">Lenovo ThinkPad</option>
+                    </select>
+                    <button
+                      id="add-intern-profile-submit"
+                      type="submit"
+                      disabled={userRole !== 'admin'}
+                      className="bg-[#0072CE] hover:bg-wm-royal text-white px-4 py-2.5 rounded font-bold text-xs shrink-0 cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add User</span>
+                    </button>
+                  </div>
+                </form>
 
                 <div className="mt-8 pt-6 border-t border-[#F1F4F6] flex justify-between items-center text-xs">
                   <span className="text-[11px] font-mono text-status-success font-bold flex items-center gap-1.5">
@@ -783,6 +991,8 @@ export default function SettingsView({
                   userRole={userRole}
                   triggerToast={triggerToast}
                   userNickname={userNickname}
+                  managedUsers={managedUsers}
+                  setManagedUsers={setManagedUsers}
                 />
               ) : (
                 <div className="bg-white border border-[#E1E4E8] rounded-xl p-8 text-center space-y-4">

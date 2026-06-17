@@ -108,6 +108,29 @@ export interface FaqItem {
 
 export type UserRole = 'admin' | 'intern';
 
+export type InternHardwarePreference = 'MacBook Pro' | 'Lenovo ThinkPad';
+
+export type InternMentorPreference = 'Marcus Chen' | 'David Park' | 'Sarah Anderson';
+
+export interface InternProfile {
+  id: string;
+  name: string;
+  email: string;
+  hardwarePreference: InternHardwarePreference;
+  mentorPreference: InternMentorPreference;
+}
+
+export interface ManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Administrator' | 'Program Coordinator' | 'Technical Mentor' | 'Summer Intern';
+  department: 'Product Engineering' | 'Data & Analytics' | 'Customer Experience' | 'Operations' | 'Career Development';
+  status: 'Active' | 'On Vacation' | 'Provisioning' | 'Inactive';
+  lastLogin: string;
+  hardware: string;
+}
+
 export interface UserPermissions {
   allowInternsToDeleteTasks: boolean;
   allowInternsToCreateFAQ: boolean;

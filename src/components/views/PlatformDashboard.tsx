@@ -23,23 +23,14 @@ import {
   Terminal,
   HelpCircle
 } from 'lucide-react';
+import type { ManagedUser } from '../../types';
 
 interface PlatformDashboardProps {
   userRole: 'admin' | 'intern';
   triggerToast: (msg: string) => void;
   userNickname: string;
-}
-
-// Simulated active user management dataset
-interface ManagedUser {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Administrator' | 'Program Coordinator' | 'Technical Mentor' | 'Summer Intern';
-  department: 'Product Engineering' | 'Data & Analytics' | 'Customer Experience' | 'Operations' | 'Career Development';
-  status: 'Active' | 'On Vacation' | 'Provisioning' | 'Inactive';
-  lastLogin: string;
-  hardware: string;
+  managedUsers: ManagedUser[];
+  setManagedUsers: React.Dispatch<React.SetStateAction<ManagedUser[]>>;
 }
 
 // Integrations types
@@ -66,20 +57,10 @@ interface IntegrationConfig {
 export default function PlatformDashboard({
   userRole,
   triggerToast,
-  userNickname
+  userNickname,
+  managedUsers,
+  setManagedUsers
 }: PlatformDashboardProps) {
-
-  // Local state for managed users
-  const [usersList, setUsersList] = useState<ManagedUser[]>([
-    { id: 'usr-1', name: 'Alex Rivera', email: 'a.rivera@genesysworks.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Active', lastLogin: 'Just now', hardware: 'MacBook Pro' },
-    { id: 'usr-2', name: 'Jordan Smith', email: 'j.smith@genesysworks.org', role: 'Summer Intern', department: 'Data & Analytics', status: 'Active', lastLogin: '12 mins ago', hardware: 'Lenovo ThinkPad' },
-    { id: 'usr-3', name: 'Marcus Chen', email: 'm.chen@westmonroe.com', role: 'Technical Mentor', department: 'Data & Analytics', status: 'Active', lastLogin: '1 hour ago', hardware: 'MacBook Pro' },
-    { id: 'usr-4', name: 'David Park', email: 'd.park@westmonroe.com', role: 'Technical Mentor', department: 'Customer Experience', status: 'Active', lastLogin: '3 hours ago', hardware: 'Lenovo ThinkPad' },
-    { id: 'usr-5', name: 'Sarah Anderson', email: 's.anderson@genesysworks.org', role: 'Program Coordinator', department: 'Career Development', status: 'Active', lastLogin: 'Yesterday', hardware: 'Lenovo ThinkPad' },
-    { id: 'usr-6', name: 'Samantha Vance', email: 's.vance@genesysworks.org', role: 'Administrator', department: 'Operations', status: 'Active', lastLogin: '2 days ago', hardware: 'MacBook Pro' },
-    { id: 'usr-7', name: 'Tyler Durden', email: 't.durden@genesysworks.org', role: 'Summer Intern', department: 'Operations', status: 'On Vacation', lastLogin: 'Last week', hardware: 'Lenovo ThinkPad' },
-    { id: 'usr-8', name: 'John Doe', email: 'j.doe@unprovisioned.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Provisioning', lastLogin: 'Never', hardware: 'MacBook Pro' }
-  ]);
 
   // Integration instances list state
   const [integrations, setIntegrations] = useState<IntegrationConfig[]>([
@@ -246,7 +227,7 @@ export default function PlatformDashboard({
 
   // User list edits
   const handleRoleChange = (userId: string, newRole: ManagedUser['role']) => {
-    setUsersList(prev => prev.map(u => {
+    setManagedUsers(prev => prev.map(u => {
       if (u.id === userId) {
         triggerToast(`Updated Role for ${u.name} to ${newRole}`);
         return { ...u, role: newRole };
@@ -256,7 +237,7 @@ export default function PlatformDashboard({
   };
 
   const handleStatusChange = (userId: string, newStatus: ManagedUser['status']) => {
-    setUsersList(prev => prev.map(u => {
+    setManagedUsers(prev => prev.map(u => {
       if (u.id === userId) {
         triggerToast(`Updated Status of ${u.name} to ${newStatus}`);
         return { ...u, status: newStatus };
@@ -340,7 +321,7 @@ export default function PlatformDashboard({
   };
 
   // Filtered users list
-  const filteredUsers = usersList.filter(u => {
+  const filteredUsers = managedUsers.filter(u => {
     const matchesSearch = u.name.toLowerCase().includes(userSearchText.toLowerCase()) || 
                           u.email.toLowerCase().includes(userSearchText.toLowerCase()) ||
                           u.department.toLowerCase().includes(userSearchText.toLowerCase());
