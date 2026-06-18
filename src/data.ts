@@ -457,36 +457,42 @@ export const INITIAL_FAQS: FaqItem[] = [
   {
     id: 'faq-1',
     category: 'scheduling',
+    status: 'published',
     question: 'How do I report my weekly hours?',
     answer: 'You should submit your hours through the "Project Board" tab by EOD every Friday. Ensure you categorize your hours correctly according to the project codes provided in your onboarding packet.'
   },
   {
     id: 'faq-2',
     category: 'scheduling',
+    status: 'published',
     question: 'What is the policy for requesting a personal day?',
     answer: 'Personal days should be requested at least 72 hours in advance. Use the "Get Support" button to submit a request to your program coordinator.'
   },
   {
     id: 'faq-3',
     category: 'technical',
+    status: 'published',
     question: "I'm having trouble with my Single Sign-On (SSO).",
     answer: 'Try clearing your browser cache and cookies first. If the problem persists, please contact the West Monroe IT Helpdesk at extension 1102.'
   },
   {
     id: 'faq-4',
     category: 'professional',
+    status: 'published',
     question: 'What is the dress code for client meetings?',
     answer: 'Our firm standard is business casual (chinos, structured slacks, blouses, collared shirts, and dress shoes). When attending on-site client meetings, match the client’s environment but err on the side of high-contrast professionalism.'
   },
   {
     id: 'faq-5',
     category: 'technical',
+    status: 'published',
     question: 'How do I configure my secure VPN tunnel connection?',
     answer: 'Initialize your GlobalProtect agent client, input "portal.westmonroe.com" as your gateway node, log in with password credentials, and complete mobile MFA push authorization.'
   },
   {
     id: 'faq-6',
     category: 'professional',
+    status: 'published',
     question: 'How should I communicate a brief delay for standing sprints?',
     answer: 'Send a responsive alert message to your buddy/manager via Teams or Slack. Include an estimated timestamp of arrival (ETA), and review notes to catch up on any action items you missed.'
   }

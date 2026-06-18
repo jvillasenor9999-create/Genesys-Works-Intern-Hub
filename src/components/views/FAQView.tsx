@@ -10,7 +10,11 @@ import {
   ArrowRight,
   Send,
   MessageSquare,
-  ShieldAlert
+  ShieldAlert,
+  Edit3,
+  Save,
+  X,
+  CheckCircle2
 } from 'lucide-react';
 import { FaqItem, UserRole, UserPermissions } from '../../types';
 
@@ -21,6 +25,14 @@ interface FAQViewProps {
   userRole?: UserRole;
   permissions?: UserPermissions;
 }
+
+type FaqCategory = FaqItem['category'];
+
+const FAQ_CATEGORIES: { id: FaqCategory; label: string }[] = [
+  { id: 'scheduling', label: 'Work & Scheduling Rules' },
+  { id: 'technical', label: 'Technical & System Support' },
+  { id: 'professional', label: 'Professional Etiquette' }
+];
 
 export default function FAQView({
   faqItems,
@@ -53,17 +65,22 @@ export default function FAQView({
 
   // Category navigation state
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [editQuestion, setEditQuestion] = useState('');
+  const [editAnswer, setEditAnswer] = useState('');
+  const [editCategory, setEditCategory] = useState<FaqCategory>('scheduling');
+  const [answeringTicketId, setAnsweringTicketId] = useState<string | null>(null);
+  const [ticketAnswer, setTicketAnswer] = useState('');
+  const [adminFormError, setAdminFormError] = useState<string | null>(null);
+  const [faqManagementMessage, setFaqManagementMessage] = useState<string | null>(null);
 
-  // Category listing
-  const groups = [
-    { id: 'scheduling', label: 'Work & Scheduling Rules' },
-    { id: 'technical', label: 'Technical & System Support' },
-    { id: 'professional', label: 'Professional Etiquette' }
-  ];
+  const isAdmin = userRole === 'admin';
+  const publishedFaqItems = faqItems.filter((item) => item.status !== 'pending');
+  const pendingFaqItems = faqItems.filter((item) => item.status === 'pending');
 
   // Filter FAQs with searchQuery and selectedCategory
   const query = searchQuery.toLowerCase().trim();
-  const filteredFaqs = faqItems.filter((f) => {
+  const filteredFaqs = publishedFaqItems.filter((f) => {
     const matchesSearch = !query || f.question.toLowerCase().includes(query) || f.answer.toLowerCase().includes(query);
     const matchesCategory = selectedCategory === 'all' || f.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -73,9 +90,97 @@ export default function FAQView({
     setExpandedFaqId(prev => (prev === id ? null : id));
   };
 
+  const handleShowFaqManagementMessage = (message: string) => {
+    setFaqManagementMessage(message);
+    setTimeout(() => setFaqManagementMessage(null), 3500);
+  };
+
+  const handleStartEditFaq = (faq: FaqItem) => {
+    if (!isAdmin) return;
+    setAnsweringTicketId(null);
+    setTicketAnswer('');
+    setEditingFaqId(faq.id);
+    setEditQuestion(faq.question);
+    setEditAnswer(faq.answer);
+    setEditCategory(faq.category);
+    setAdminFormError(null);
+  };
+
+  const handleCancelEditFaq = () => {
+    setEditingFaqId(null);
+    setEditQuestion('');
+    setEditAnswer('');
+    setEditCategory('scheduling');
+    setAdminFormError(null);
+  };
+
+  const handleSaveFaqEdit = (faqId: string) => {
+    const trimmedQuestion = editQuestion.trim();
+    const trimmedAnswer = editAnswer.trim();
+
+    if (!trimmedQuestion || !trimmedAnswer) {
+      setAdminFormError('Question and answer are required before saving.');
+      return;
+    }
+
+    setFaqItems(prev => prev.map(item => (
+      item.id === faqId
+        ? {
+            ...item,
+            category: editCategory,
+            question: trimmedQuestion,
+            answer: trimmedAnswer,
+            status: 'published'
+          }
+        : item
+    )));
+    setExpandedFaqId(faqId);
+    handleCancelEditFaq();
+    handleShowFaqManagementMessage('FAQ updated successfully.');
+  };
+
+  const handleStartAnswerTicket = (ticket: FaqItem) => {
+    if (!isAdmin) return;
+    setEditingFaqId(null);
+    setAnsweringTicketId(ticket.id);
+    setTicketAnswer(ticket.answer);
+    setAdminFormError(null);
+  };
+
+  const handleCancelAnswerTicket = () => {
+    setAnsweringTicketId(null);
+    setTicketAnswer('');
+    setAdminFormError(null);
+  };
+
+  const handlePublishTicketAnswer = (ticketId: string) => {
+    const trimmedAnswer = ticketAnswer.trim();
+
+    if (!trimmedAnswer) {
+      setAdminFormError('Answer text is required before publishing.');
+      return;
+    }
+
+    setFaqItems(prev => prev.map(item => (
+      item.id === ticketId
+        ? {
+            ...item,
+            answer: trimmedAnswer,
+            status: 'published',
+            answeredAt: new Date().toISOString()
+          }
+        : item
+    )));
+    setExpandedFaqId(ticketId);
+    handleCancelAnswerTicket();
+    handleShowFaqManagementMessage('Inquiry answered and published to the FAQ.');
+  };
+
   const handleNewSupportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supportSubject || !supportMessage) return;
+    const trimmedSupportSubject = supportSubject.trim();
+    const trimmedSupportMessage = supportMessage.trim();
+    if (!trimmedSupportSubject || !trimmedSupportMessage) return;
 
     if (userRole === 'intern' && !permissions.allowInternsToCreateFAQ) {
       alert("Access Blocked: Intern FAQ creation is disabled by security configuration. Modify this under the Access & Permissions tab in Settings.");
@@ -102,8 +207,10 @@ export default function FAQView({
       const userFaq: FaqItem = {
         id: `faq-user-${Date.now()}`,
         category: resolvedCategory,
-        question: `Pending Inquiry: ${supportSubject}`,
-        answer: `Wait status (Reviewing). Details submitted: "${supportMessage}". Our coordinator will submit a response directly within 4 business hours!`
+        question: trimmedSupportSubject,
+        answer: '',
+        status: 'pending',
+        submittedDetails: trimmedSupportMessage
       };
       setFaqItems(prev => [...prev, userFaq]);
 
@@ -149,6 +256,13 @@ export default function FAQView({
         </div>
       )}
 
+      {faqManagementMessage && (
+        <div className="fixed bottom-6 right-6 bg-[#002B49] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce text-xs font-bold font-sans">
+          <CheckCircle2 className="w-5 h-5 text-status-success" />
+          <span>{faqManagementMessage}</span>
+        </div>
+      )}
+
       {/* Toast Cache Flush notification */}
       {cacheToast && (
         <div className="fixed bottom-6 right-6 bg-[#002B49] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce text-xs font-bold font-sans">
@@ -180,7 +294,7 @@ export default function FAQView({
               >
                 All Topics
               </button>
-              {groups.map((group) => (
+              {FAQ_CATEGORIES.map((group) => (
                 <button
                   key={group.id}
                   type="button"
@@ -201,30 +315,115 @@ export default function FAQView({
             {filteredFaqs.length > 0 ? (
               filteredFaqs.map((faq) => {
                 const isExpanded = expandedFaqId === faq.id;
+                const isEditing = editingFaqId === faq.id;
                 return (
-                  <div 
-                    key={faq.id} 
+                  <div
+                    key={faq.id}
                     className="bg-white border border-[#E1E4E8] rounded-xl overflow-hidden shadow-xs hover:border-wm-royal transition-all"
                   >
-                    {/* Collapsible header */}
-                    <button
-                      onClick={() => handleToggleFaq(faq.id)}
-                      className="w-full px-6 py-4.5 flex justify-between items-center text-left hover:bg-[#FAFBCF]/5 select-none focus:outline-none"
-                    >
-                      <h4 className="text-xs font-bold text-wm-navy leading-normal pr-4">{faq.question}</h4>
-                      <span className="p-1 rounded bg-neutral-100 text-on-surface-variant group-hover:bg-wm-royal/5 shrink-0">
-                        {isExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      </span>
-                    </button>
+                    {isEditing ? (
+                      <div className="p-5 space-y-4 bg-neutral-50/70 animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="md:col-span-2 space-y-1">
+                            <label className="text-[9px] font-mono font-bold uppercase text-on-surface-variant">Question</label>
+                            <input
+                              type="text"
+                              value={editQuestion}
+                              onChange={(e) => setEditQuestion(e.target.value)}
+                              className="w-full text-xs p-2.5 bg-white border border-[#E1E4E8] rounded-lg outline-none focus:border-wm-royal"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-mono font-bold uppercase text-on-surface-variant">Category</label>
+                            <select
+                              value={editCategory}
+                              onChange={(e) => setEditCategory(e.target.value as FaqCategory)}
+                              className="w-full text-xs p-2.5 bg-white border border-[#E1E4E8] rounded-lg outline-none focus:border-wm-royal cursor-pointer"
+                            >
+                              {FAQ_CATEGORIES.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
 
-                    {/* Collapsible body description */}
-                    {isExpanded && (
-                      <div className="px-6 pb-5 pt-1.5 border-t border-[#F1F4F6] bg-neutral-50/50 animate-fade-in text-xs leading-relaxed text-on-surface-variant">
-                        <p className="font-sans font-medium">{faq.answer}</p>
-                        <span className="inline-block mt-3 px-2 py-0.5 bg-blue-50 text-wm-royal font-mono text-[9px] font-bold rounded capitalize border border-blue-100">
-                          {faq.category}
-                        </span>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-mono font-bold uppercase text-on-surface-variant">Answer</label>
+                          <textarea
+                            rows={4}
+                            value={editAnswer}
+                            onChange={(e) => setEditAnswer(e.target.value)}
+                            className="w-full text-xs p-2.5 bg-white border border-[#E1E4E8] rounded-lg outline-none focus:border-wm-royal leading-relaxed"
+                          />
+                        </div>
+
+                        {adminFormError && (
+                          <p className="text-[10px] font-bold text-status-blocked">{adminFormError}</p>
+                        )}
+
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelEditFaq}
+                            className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-on-surface-variant text-[10px] font-bold flex items-center gap-1.5 hover:bg-neutral-100"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Cancel</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveFaqEdit(faq.id)}
+                            className="px-3 py-2 rounded-lg bg-wm-royal text-white text-[10px] font-bold flex items-center gap-1.5 hover:opacity-95"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save FAQ</span>
+                          </button>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <div className="w-full px-6 py-4.5 flex justify-between items-center gap-3 hover:bg-[#FAFBCF]/5 select-none">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFaq(faq.id)}
+                            className="flex-1 flex justify-between items-center text-left focus:outline-none"
+                          >
+                            <h4 className="text-xs font-bold text-wm-navy leading-normal pr-4">{faq.question}</h4>
+                            <span className="p-1 rounded bg-neutral-100 text-on-surface-variant group-hover:bg-wm-royal/5 shrink-0">
+                              {isExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            </span>
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditFaq(faq)}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-wm-royal text-[10px] font-bold flex items-center gap-1.5 border border-blue-100 hover:bg-blue-100"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {isExpanded && (
+                          <div className="px-6 pb-5 pt-1.5 border-t border-[#F1F4F6] bg-neutral-50/50 animate-fade-in text-xs leading-relaxed text-on-surface-variant">
+                            <p className="font-sans font-medium">{faq.answer}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                              <span className="inline-block px-2 py-0.5 bg-blue-50 text-wm-royal font-mono text-[9px] font-bold rounded capitalize border border-blue-100">
+                                {faq.category}
+                              </span>
+                              {faq.answeredAt && (
+                                <span className="inline-block px-2 py-0.5 bg-emerald-50 text-status-success font-mono text-[9px] font-bold rounded border border-emerald-100">
+                                  Answered
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 );
@@ -241,39 +440,87 @@ export default function FAQView({
           </div>
 
           {/* Active Support Tickets Session Tracker */}
-          {faqItems.filter(item => item.id.startsWith('faq-user-')).length > 0 && (
+          {pendingFaqItems.length > 0 && (
             <div className="bg-white border border-[#E1E4E8] rounded-xl p-5 shadow-xs mt-6">
               <div className="flex items-center justify-between border-b border-gray-150 pb-3 mb-4 select-none">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
                   <h4 className="font-display font-bold text-wm-navy text-xs uppercase tracking-wider">Active Coordinator Inquiries</h4>
                 </div>
-                <span className="text-[10px] font-mono text-on-surface-variant font-bold">Logged (Session state)</span>
+                <span className="text-[10px] font-mono text-on-surface-variant font-bold">{pendingFaqItems.length} Pending</span>
               </div>
               <div className="space-y-3.5">
-                {faqItems.filter(item => item.id.startsWith('faq-user-')).map((ticket) => (
-                  <div key={ticket.id} className="p-4 bg-amber-50/20 border border-amber-200/50 rounded-lg text-left relative animate-fade-in">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                {pendingFaqItems.map((ticket) => {
+                  const isAnsweringTicket = answeringTicketId === ticket.id;
+
+                  return (
+                  <div key={ticket.id} className="p-4 bg-amber-50/20 border border-amber-200/50 rounded-lg text-left relative animate-fade-in space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1">
                         <span className="text-[9px] font-mono font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded uppercase">
                           {ticket.category}
                         </span>
                         <h5 className="text-xs font-bold text-wm-navy mt-1">
-                          {ticket.question.replace('Pending Inquiry: ', '')}
+                          {ticket.question}
                         </h5>
                         <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                          {ticket.answer.replace(/Wait status \(Reviewing\)\. Details submitted: /i, '').replace(/[\"\']/g, '')}
+                          {ticket.submittedDetails || 'No details provided.'}
                         </p>
                       </div>
                       <div className="shrink-0 flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1.5 text-right mt-2 sm:mt-0">
                         <span className="text-[9px] font-bold text-white bg-slate-500 px-2.5 py-1 rounded-full text-center tracking-wide uppercase leading-none">
                           In Queue
                         </span>
-                        <span className="text-[9px] text-[#bf8500] font-sans font-bold leading-none">Response &lt;4h</span>
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStartAnswerTicket(ticket)}
+                            className="text-[9px] text-wm-royal font-sans font-bold leading-none hover:underline"
+                          >
+                            Answer
+                          </button>
+                        ) : (
+                          <span className="text-[9px] text-[#bf8500] font-sans font-bold leading-none">Response &lt;4h</span>
+                        )}
                       </div>
                     </div>
+
+                    {isAnsweringTicket && (
+                      <div className="pt-3 border-t border-amber-200/60 space-y-2">
+                        <label className="text-[9px] font-mono font-bold uppercase text-amber-700">Admin Answer</label>
+                        <textarea
+                          rows={4}
+                          value={ticketAnswer}
+                          onChange={(e) => setTicketAnswer(e.target.value)}
+                          placeholder="Write the answer that should be published to the FAQ knowledge base..."
+                          className="w-full text-xs p-2.5 bg-white border border-amber-200 rounded-lg outline-none focus:border-wm-royal leading-relaxed"
+                        />
+                        {adminFormError && (
+                          <p className="text-[10px] font-bold text-status-blocked">{adminFormError}</p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelAnswerTicket}
+                            className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-on-surface-variant text-[10px] font-bold flex items-center gap-1.5 hover:bg-neutral-100"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Cancel</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePublishTicketAnswer(ticket.id)}
+                            className="px-3 py-2 rounded-lg bg-wm-royal text-white text-[10px] font-bold flex items-center gap-1.5 hover:opacity-95"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Publish Answer</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

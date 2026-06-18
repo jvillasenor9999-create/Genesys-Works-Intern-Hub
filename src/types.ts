@@ -105,6 +105,9 @@ export interface FaqItem {
   category: 'scheduling' | 'technical' | 'professional';
   question: string;
   answer: string;
+  status?: 'published' | 'pending';
+  submittedDetails?: string;
+  answeredAt?: string;
 }
 
 export type UserRole = 'admin' | 'intern';
