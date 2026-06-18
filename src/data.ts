@@ -1,4 +1,4 @@
-import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem } from './types';
+import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem, ProjectMilestone } from './types';
 
 export const INITIAL_TASKS: Task[] = [
   {
@@ -8,6 +8,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'High',
     dueDate: 'Sep 22',
+    startDaysOffset: 5,
+    durationDays: 8,
     description: 'Create a comprehensive OpenAPI/Swagger reference specification detailing SSO auth endpoints, header structures, dynamic token refresh handshakes, and response models. Coordinate with the core platform engineering team for security gate audits.',
     assignee: {
       name: 'Amos Rivera',
@@ -30,6 +32,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Opportunity',
     priority: 'Low',
     dueDate: 'Future Sprint',
+    startDaysOffset: 25,
+    durationDays: 7,
     description: 'Inquire client telemetry layouts used across top Salesforce CRM dashboards. Draft a 3-slide analysis prioritizing spatial efficiency, dark/light contrast configurations, and modular bento layout options.',
     comments: []
   },
@@ -40,6 +44,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'High',
     dueDate: 'Due tomorrow • Project: Internal UX',
+    startDaysOffset: 2,
+    durationDays: 9,
     description: 'Iterate mockup layers on Figma integrating internal client comments. Refine critical metric alignments, navigation spacing ratios, and custom branding palette tokens matching the West Monroe style matrix.',
     assignee: {
       name: 'Alex Rivera',
@@ -63,6 +69,8 @@ export const INITIAL_TASKS: Task[] = [
     priority: 'Medium',
     dueDate: 'Tomorrow',
     progress: 66,
+    startDaysOffset: 4,
+    durationDays: 6,
     description: 'Address overlapping viewport boundaries in CSS flexbox layers on screen sizes below 640px. Make sure learning list modules scroll independently and sidebar folds cleanly without breaking the flow.',
     assignee: {
       name: 'Marcus Chen',
@@ -85,6 +93,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Bug Fix',
     priority: 'High',
     dueDate: 'Due Fri • Project: Client Analytics',
+    startDaysOffset: 9,
+    durationDays: 5,
     description: 'Audit macro formulas across three main data worksheets. Clean up unresolved name references and static lookups, substituting them with dynamic XLOOKUP operations for high security and performance.',
     comments: []
   },
@@ -96,6 +106,8 @@ export const INITIAL_TASKS: Task[] = [
     priority: 'High',
     dueDate: 'Oct 30',
     commentsCount: 3,
+    startDaysOffset: 29,
+    durationDays: 8,
     description: 'Document core engineering workflows, target deliverables, user validation timelines, and team budget allocations for Q4 planning review with executive project sponsors.',
     assignee: {
       name: 'Sarah Anderson',
@@ -125,6 +137,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Completed',
     priority: 'Low',
     dueDate: 'Sep 12',
+    startDaysOffset: 1,
+    durationDays: 3,
     description: 'Verify signature tasks on W-4 forms, standard compliance handbooks, security clearances, and system portal password setup actions. Complete final onboarding quiz check.',
     assignee: {
       name: 'Thomas Wright',
@@ -147,6 +161,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'Medium',
     dueDate: 'Due next week • Internal Development',
+    startDaysOffset: 17,
+    durationDays: 9,
     description: 'Assemble key program milestones, technical skill growth metrics, client service highlights, and final recommendations into a 15-minute presentation slides structure for cohort review.',
     comments: []
   },
@@ -157,6 +173,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'Medium',
     dueDate: 'Oct 15',
+    startDaysOffset: 20,
+    durationDays: 8,
     description: 'Set up a client-side reactive sandbox where interns can practice lookup constructs, conditional formatting strategies, and pivot table query exercises in standard environments.',
     comments: []
   },
@@ -167,6 +185,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Bug Fix',
     priority: 'High',
     dueDate: 'Oct 02',
+    startDaysOffset: 14,
+    durationDays: 6,
     description: 'Formulate safe-handling parameters regarding client identity, PII masking triggers, export logs auditing metrics, and credential retention procedures inside internal Salesforce tenants.',
     comments: []
   },
@@ -177,8 +197,53 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Opportunity',
     priority: 'Low',
     dueDate: 'Oct 28',
+    startDaysOffset: 31,
+    durationDays: 6,
     description: 'Explore template styling layouts utilizing West Monroe theme matrices for executive summary metrics dashboards, client billing reports, and employee utilization analytics.',
     comments: []
+  }
+];
+
+export const PROJECT_MILESTONES: ProjectMilestone[] = [
+  {
+    id: 'milestone-1',
+    title: 'SSO Integration Architecture Handshake',
+    date: '2026-09-15',
+    category: 'architecture',
+    status: 'completed',
+    description: 'Kickoff alignment for identity flows, access assumptions, and the platform integration plan.'
+  },
+  {
+    id: 'milestone-2',
+    title: 'API Documentation Review Gate',
+    date: '2026-09-22',
+    category: 'delivery',
+    status: 'current',
+    description: 'Mentors review endpoint coverage, auth notes, and example request/response completeness.'
+  },
+  {
+    id: 'milestone-3',
+    title: 'Mid-Term Intern Deliverables Audit',
+    date: '2026-09-29',
+    category: 'review',
+    status: 'upcoming',
+    description: 'Coordinator review of committed work, blockers, and progress against the intern project board.'
+  },
+  {
+    id: 'milestone-4',
+    title: 'Consulting Case Presentation Rehearsal',
+    date: '2026-10-06',
+    category: 'presentation',
+    status: 'upcoming',
+    description: 'Cohort rehearsal for delivery structure, recommendations, and speaking roles.'
+  },
+  {
+    id: 'milestone-5',
+    title: 'Client Analytics Showcase Prep',
+    date: '2026-10-15',
+    category: 'presentation',
+    status: 'upcoming',
+    description: 'Final readiness checkpoint for visuals, demo flow, and stakeholder questions.'
   }
 ];
 

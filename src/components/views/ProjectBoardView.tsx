@@ -26,11 +26,70 @@ import {
   Workflow,
   CheckSquare,
   Bookmark,
-  Activity,
   UserCheck
 } from 'lucide-react';
-import { Task, UserRole, UserPermissions, ManagedUser } from '../../types';
+import { Task, UserRole, UserPermissions, ManagedUser, ProjectMilestone, Meeting } from '../../types';
 import TaskDetailModal from '../TaskDetailModal';
+
+const TIMELINE_TOTAL_DAYS = 36;
+const TIMELINE_CALENDAR_DAYS = 42;
+const TIMELINE_START_DATE = new Date(2026, 8, 15, 12);
+const TIMELINE_CURRENT_DATE = new Date(2026, 8, 29, 12);
+const OUTLOOK_CALENDAR_YEAR = 2026;
+const DAY_IN_MS = 1000 * 60 * 60 * 24;
+const OUTLOOK_MONTH_INDEXES: Record<string, number> = {
+  JAN: 0,
+  FEB: 1,
+  MAR: 2,
+  APR: 3,
+  MAY: 4,
+  JUN: 5,
+  JUL: 6,
+  AUG: 7,
+  SEP: 8,
+  OCT: 9,
+  NOV: 10,
+  DEC: 11
+};
+
+const addTimelineDays = (date: Date, days: number) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(date.getDate() + days);
+  return nextDate;
+};
+
+const parseTimelineDate = (date: string) => {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day, 12);
+};
+
+const formatTimelineDate = (date: Date) => date.toLocaleDateString('en-US', {
+  month: 'short',
+  day: 'numeric'
+});
+
+const formatDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getMilestoneOffset = (date: string) => {
+  return Math.round((parseTimelineDate(date).getTime() - TIMELINE_START_DATE.getTime()) / DAY_IN_MS) + 1;
+};
+
+const getWeekStartDate = (date: Date) => {
+  const dayOffset = (date.getDay() + 6) % 7;
+  return addTimelineDays(date, -dayOffset);
+};
+
+const getWeekEndDate = (date: Date) => addTimelineDays(getWeekStartDate(date), 6);
+
+const parseMeetingDate = (meeting: Meeting) => {
+  const monthIndex = OUTLOOK_MONTH_INDEXES[meeting.dateMonth.toUpperCase()] ?? 0;
+  return new Date(OUTLOOK_CALENDAR_YEAR, monthIndex, parseInt(meeting.dateDay, 10), 12);
+};
 
 interface ProjectBoardViewProps {
   tasks: Task[];
@@ -43,6 +102,9 @@ interface ProjectBoardViewProps {
   permissions?: UserPermissions;
   managedUsers: ManagedUser[];
   activeInternUserId: string;
+  projectMilestones: ProjectMilestone[];
+  setProjectMilestones: React.Dispatch<React.SetStateAction<ProjectMilestone[]>>;
+  meetings: Meeting[];
 }
 
 export default function ProjectBoardView({
@@ -60,7 +122,10 @@ export default function ProjectBoardView({
     allowInternsToSelfApproveMilestones: true
   },
   managedUsers,
-  activeInternUserId
+  activeInternUserId,
+  projectMilestones,
+  setProjectMilestones,
+  meetings
 }: ProjectBoardViewProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const summerInternUsers = managedUsers.filter(user => user.role === 'Summer Intern');
@@ -88,6 +153,11 @@ export default function ProjectBoardView({
   const [backlogInputTitle, setBacklogInputTitle] = useState('');
   const [backlogInputPriority, setBacklogInputPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [backlogInputType, setBacklogInputType] = useState<'Feature' | 'Bug Fix' | 'Opportunity'>('Feature');
+  const [isCreatingMilestone, setIsCreatingMilestone] = useState<boolean>(false);
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState<string>('');
+  const [newMilestoneDate, setNewMilestoneDate] = useState<string>(formatDateKey(addTimelineDays(TIMELINE_CURRENT_DATE, 7)));
+  const [newMilestoneDescription, setNewMilestoneDescription] = useState<string>('');
+  const [newMilestoneError, setNewMilestoneError] = useState<string>('');
 
   // Filter tasks based on Search Query
   const getFilteredTasks = (taskList: Task[]) => {
@@ -109,6 +179,111 @@ export default function ProjectBoardView({
   // Separate tasks currently in Active Sprint (todo, progress, review, done) vs Product Backlog
   const sprintTasks = filteredTasks.filter(t => t.status !== 'backlog');
   const backlogTasks = filteredTasks.filter(t => t.status === 'backlog');
+  const timelineTasks = filteredTasks;
+  const timelineEndDate = addTimelineDays(TIMELINE_START_DATE, TIMELINE_TOTAL_DAYS - 1);
+  const sortedProjectMilestones = [...projectMilestones].sort((firstMilestone, secondMilestone) => (
+    parseTimelineDate(firstMilestone.date).getTime() - parseTimelineDate(secondMilestone.date).getTime()
+  ));
+  const currentProjectMilestone = sortedProjectMilestones.find(milestone => milestone.status === 'current');
+  const currentScheduleDate = currentProjectMilestone ? parseTimelineDate(currentProjectMilestone.date) : TIMELINE_CURRENT_DATE;
+  const sortedCalendarMeetings = [...meetings].sort((firstMeeting, secondMeeting) => (
+    parseMeetingDate(firstMeeting).getTime() - parseMeetingDate(secondMeeting).getTime()
+  ));
+  const timelineWeekLabels = Array.from({ length: 6 }, (_, index) => {
+    const weekStart = addTimelineDays(TIMELINE_START_DATE, index * 7);
+    return {
+      id: `week-${index + 1}`,
+      label: `Week ${index + 1}`,
+      date: formatTimelineDate(weekStart)
+    };
+  });
+
+  const getTaskWindow = (task: Task) => {
+    const startOffset = Math.min(Math.max(task.startDaysOffset ?? 2, 1), TIMELINE_TOTAL_DAYS);
+    const duration = Math.min(Math.max(task.durationDays ?? 5, 1), TIMELINE_TOTAL_DAYS);
+    const startDate = addTimelineDays(TIMELINE_START_DATE, startOffset - 1);
+    const endDate = addTimelineDays(startDate, duration - 1);
+
+    return { startOffset, duration, startDate, endDate };
+  };
+
+  const scheduleSourceDates = [
+    TIMELINE_START_DATE,
+    timelineEndDate,
+    ...timelineTasks.flatMap(task => {
+      const { startDate, endDate } = getTaskWindow(task);
+      return [startDate, endDate];
+    }),
+    ...sortedProjectMilestones.map(milestone => parseTimelineDate(milestone.date)),
+    ...sortedCalendarMeetings.map(meeting => parseMeetingDate(meeting))
+  ];
+  const scheduleCalendarStartDate = getWeekStartDate(new Date(Math.min(...scheduleSourceDates.map(date => date.getTime()))));
+  const scheduleCalendarEndDate = getWeekEndDate(new Date(Math.max(...scheduleSourceDates.map(date => date.getTime()))));
+  const scheduleCalendarDayCount = Math.max(
+    TIMELINE_CALENDAR_DAYS,
+    Math.round((scheduleCalendarEndDate.getTime() - scheduleCalendarStartDate.getTime()) / DAY_IN_MS) + 1
+  );
+  const timelineCalendarDays = Array.from({ length: scheduleCalendarDayCount }, (_, index) => addTimelineDays(scheduleCalendarStartDate, index));
+  const scheduleRangeLabel = `${formatTimelineDate(scheduleCalendarStartDate)} - ${formatTimelineDate(scheduleCalendarEndDate)}`;
+
+  const getTasksForCalendarDay = (date: Date) => {
+    const dateTime = date.getTime();
+    return timelineTasks.filter(task => {
+      const { startDate, endDate } = getTaskWindow(task);
+      return dateTime >= startDate.getTime() && dateTime <= endDate.getTime();
+    });
+  };
+
+  const getMeetingsForCalendarDay = (date: Date) => (
+    sortedCalendarMeetings.filter(meeting => formatDateKey(parseMeetingDate(meeting)) === formatDateKey(date))
+  );
+
+  const getMilestonesForCalendarDay = (date: Date) => (
+    sortedProjectMilestones.filter(milestone => formatDateKey(parseTimelineDate(milestone.date)) === formatDateKey(date))
+  );
+
+  const getMilestoneClassName = (milestone: ProjectMilestone) => {
+    if (milestone.category === 'intern') return 'border-wm-royal bg-[#F7FBFF] text-wm-royal';
+    if (milestone.status === 'completed') return 'border-status-success bg-[#EAF7EC] text-status-success';
+    if (milestone.status === 'current') return 'border-wm-royal bg-[#e7f3ff] text-wm-royal';
+    if (milestone.category === 'presentation') return 'border-shoutout-gold bg-[#FFF7D6] text-[#9A6B00]';
+    return 'border-[#D0D5DD] bg-white text-on-surface-variant';
+  };
+
+  const getCalendarTaskClassName = (task: Task) => {
+    if (task.status === 'done') return 'bg-[#EAF7EC] text-status-success border-status-success/30';
+    if (task.status === 'progress') return 'bg-[#e7f3ff] text-wm-royal border-wm-royal/20';
+    if (task.status === 'review') return 'bg-[#FFF7D6] text-[#9A6B00] border-shoutout-gold/30';
+    if (task.status === 'backlog') return 'bg-neutral-100 text-on-surface-variant border-neutral-200';
+    return 'bg-white text-wm-navy border-[#D0D5DD]';
+  };
+
+  const getTimelineBarStyle = (task: Task) => {
+    const { startOffset, duration } = getTaskWindow(task);
+    const leftPercent = ((startOffset - 1) / TIMELINE_TOTAL_DAYS) * 100;
+    const widthPercent = Math.min((duration / TIMELINE_TOTAL_DAYS) * 100, 100 - leftPercent);
+
+    return {
+      left: `${leftPercent}%`,
+      width: `${Math.max(widthPercent, 2.5)}%`
+    };
+  };
+
+  const upcomingMilestonesCount = sortedProjectMilestones.filter(milestone => milestone.status !== 'completed').length;
+  const completedTimelineTasksCount = timelineTasks.filter(task => task.status === 'done').length;
+  const outlookMeetingCount = sortedCalendarMeetings.length;
+  const attentionTimelineTasksCount = timelineTasks.filter(task => {
+    const { endDate } = getTaskWindow(task);
+    return task.status !== 'done' && (
+      task.status === 'progress' ||
+      task.status === 'review' ||
+      endDate.getTime() < currentScheduleDate.getTime()
+    );
+  }).length;
+  const sprintRangeLabel = `${formatTimelineDate(TIMELINE_START_DATE)} - ${formatTimelineDate(timelineEndDate)}`;
+  const currentTimelineOffset = Math.round((currentScheduleDate.getTime() - TIMELINE_START_DATE.getTime()) / DAY_IN_MS) + 1;
+  const currentTimelineLeft = `${((currentTimelineOffset - 1) / TIMELINE_TOTAL_DAYS) * 100}%`;
+  const canCreateInternMilestone = userRole === 'intern' && !!activeInternUser;
 
   // Columns specification for Kanban board
   const columns = [
@@ -248,6 +423,41 @@ export default function ProjectBoardView({
 
     setTasks(prev => [newTask, ...prev]);
     setBacklogInputTitle('');
+  };
+
+  const handleCreateInternMilestone = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedTitle = newMilestoneTitle.trim();
+    if (!trimmedTitle) {
+      setNewMilestoneError('Milestone title is required.');
+      return;
+    }
+
+    if (!newMilestoneDate) {
+      setNewMilestoneError('Milestone date is required.');
+      return;
+    }
+
+    const creatorName = activeInternUser?.name ?? 'Intern';
+    const milestoneDescription = newMilestoneDescription.trim();
+    const newMilestone: ProjectMilestone = {
+      id: `milestone-${Date.now()}`,
+      title: trimmedTitle,
+      date: newMilestoneDate,
+      category: 'intern',
+      status: 'upcoming',
+      description: milestoneDescription || `Personal milestone created by ${creatorName}.`,
+      createdByUserId: activeInternUser?.id,
+      createdByName: creatorName
+    };
+
+    setProjectMilestones(prev => [...prev, newMilestone]);
+    setNewMilestoneTitle('');
+    setNewMilestoneDescription('');
+    setNewMilestoneDate(formatDateKey(addTimelineDays(TIMELINE_CURRENT_DATE, 7)));
+    setNewMilestoneError('');
+    setIsCreatingMilestone(false);
   };
 
   // Adjust Start offset inside Timeline View
@@ -828,17 +1038,261 @@ export default function ProjectBoardView({
 
       {/* Conditionally Render: Timeline Map (Gantt style Scheduling Dashboard) */}
       {subTab === 'timeline' && (
-        <div id="timeline-view-section" className="flex-1 overflow-y-auto p-10 bg-[#FAFBCF]/10 bg-[#F4F7F9] text-left">
+        <div id="timeline-view-section" className="flex-1 overflow-y-auto p-10 bg-[#F4F7F9] text-left">
           
           {/* Gantt Header explanatory block */}
-          <div className="bg-white border border-[#E1E4E8] rounded-xl p-6 shadow-sm mb-8 font-sans">
-            <h3 className="font-bold text-base text-wm-navy flex items-center gap-2">
-              <CalendarDays className="w-5.5 h-5.5 text-wm-royal" />
-              <span>Program Schedule Mapping</span>
-            </h3>
-            <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-              Drag start offset sliders and adjust workload durations on the sidebar panels. Changes are reactive and dynamically adjust horizontal timeline bars to trace workload overlap metrics.
-            </p>
+          <div className="mb-6 font-sans">
+            <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Program Schedule</span>
+                <h3 className="font-display font-bold text-xl text-wm-navy mt-1 flex items-center gap-2">
+                  <CalendarDays className="w-6 h-6 text-wm-royal" />
+                  <span>Timeline Map</span>
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono font-bold text-on-surface-variant uppercase">
+                <Clock className="w-4 h-4 text-wm-royal" />
+                <span>{sprintRangeLabel}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 font-sans">
+            <div className="bg-white border border-[#E1E4E8] rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Upcoming Milestones</span>
+                <Target className="w-4 h-4 text-wm-royal" />
+              </div>
+              <p className="text-2xl font-display font-bold text-wm-navy mt-3">{upcomingMilestonesCount}</p>
+            </div>
+            <div className="bg-white border border-[#E1E4E8] rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Needs Attention</span>
+                <AlertTriangle className="w-4 h-4 text-shoutout-gold" />
+              </div>
+              <p className="text-2xl font-display font-bold text-wm-navy mt-3">{attentionTimelineTasksCount}</p>
+            </div>
+            <div className="bg-white border border-[#E1E4E8] rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Completed Tasks</span>
+                <CheckCircle2 className="w-4 h-4 text-status-success" />
+              </div>
+              <p className="text-2xl font-display font-bold text-wm-navy mt-3">{completedTimelineTasksCount}</p>
+            </div>
+            <div className="bg-white border border-[#E1E4E8] rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Outlook Events</span>
+                <Calendar className="w-4 h-4 text-wm-royal" />
+              </div>
+              <p className="text-2xl font-display font-bold text-wm-navy mt-3">{outlookMeetingCount}</p>
+            </div>
+          </div>
+
+          <div className="mb-6 font-sans">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Milestone Row</span>
+                <h4 className="font-display font-bold text-lg text-wm-navy mt-1">Key Dates And Intern Goals</h4>
+              </div>
+              {canCreateInternMilestone && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingMilestone(prev => !prev);
+                    setNewMilestoneError('');
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-wm-royal px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#005fae] active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{isCreatingMilestone ? 'Close Form' : 'Add My Milestone'}</span>
+                </button>
+              )}
+            </div>
+
+            {isCreatingMilestone && canCreateInternMilestone && (
+              <form
+                onSubmit={handleCreateInternMilestone}
+                className="mb-4 grid grid-cols-1 lg:grid-cols-12 gap-3 rounded-xl border border-wm-royal/20 bg-white p-4 shadow-sm"
+              >
+                <div className="lg:col-span-4">
+                  <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+                    Milestone Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newMilestoneTitle}
+                    onChange={(event) => setNewMilestoneTitle(event.target.value)}
+                    placeholder="Portfolio demo ready"
+                    className="w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm font-semibold text-wm-navy outline-none focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                  />
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newMilestoneDate}
+                    min={formatDateKey(scheduleCalendarStartDate)}
+                    max={formatDateKey(scheduleCalendarEndDate)}
+                    onChange={(event) => setNewMilestoneDate(event.target.value)}
+                    className="w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm font-semibold text-wm-navy outline-none focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                  />
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+                    Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={newMilestoneDescription}
+                    onChange={(event) => setNewMilestoneDescription(event.target.value)}
+                    placeholder="What should be ready?"
+                    className="w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm font-semibold text-wm-navy outline-none focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                  />
+                </div>
+                <div className="lg:col-span-2 flex flex-col justify-end gap-2">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-wm-navy px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-wm-royal active:scale-95 transition-all"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Add</span>
+                  </button>
+                  {newMilestoneError && (
+                    <p className="text-[10px] font-bold text-status-blocked">{newMilestoneError}</p>
+                  )}
+                </div>
+              </form>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+              {sortedProjectMilestones.map((milestone) => (
+                <div
+                  key={milestone.id}
+                  className={`border rounded-xl p-5 shadow-sm ${getMilestoneClassName(milestone)}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="rounded-lg bg-white/80 border border-current/10 px-3 py-2 text-center min-w-16">
+                      <span className="block text-[10px] font-mono font-bold uppercase tracking-wider">
+                        {parseTimelineDate(milestone.date).toLocaleDateString('en-US', { month: 'short' })}
+                      </span>
+                      <span className="block text-2xl font-display font-bold leading-none text-wm-navy mt-1">
+                        {parseTimelineDate(milestone.date).getDate()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-white/85 px-2.5 py-1 text-[8.5px] font-mono font-bold uppercase tracking-wider border border-current/10">
+                          {milestone.status}
+                        </span>
+                        {milestone.createdByName && (
+                          <span className="rounded-full bg-wm-royal text-white px-2.5 py-1 text-[8.5px] font-mono font-bold uppercase tracking-wider">
+                            {milestone.createdByName}
+                          </span>
+                        )}
+                      </div>
+                      <h5 className="font-display font-bold text-base leading-snug mt-3 text-wm-navy">{milestone.title}</h5>
+                      <p className="text-xs leading-relaxed mt-2 text-on-surface-variant">{milestone.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-[#E1E4E8] rounded-xl p-5 shadow-sm mb-8 font-sans">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F4F6] mb-4">
+              <div>
+                <span className="text-[9px] font-mono font-bold text-on-surface-variant uppercase tracking-wider">Outlook Calendar</span>
+                <h4 className="font-display font-bold text-base text-wm-navy mt-1">Schedule View</h4>
+                <p className="text-[11px] text-on-surface-variant mt-1">
+                  Synced from {outlookMeetingCount} intern calendar events and {timelineTasks.length} project board items.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono font-bold text-on-surface-variant uppercase">
+                <Calendar className="w-5 h-5 text-wm-royal" />
+                <span>{scheduleRangeLabel}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 border-y border-[#E1E4E8] bg-[#F7F9FC] text-center text-[9px] font-mono font-bold text-on-surface-variant uppercase">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayLabel => (
+                <span key={dayLabel} className="border-r border-[#E1E4E8] last:border-r-0 py-2">{dayLabel}</span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 border-l border-[#E1E4E8]">
+              {timelineCalendarDays.map(day => {
+                const dayKey = formatDateKey(day);
+                const dayTasks = getTasksForCalendarDay(day);
+                const dayMeetings = getMeetingsForCalendarDay(day);
+                const dayMilestones = getMilestonesForCalendarDay(day);
+                const visibleMeetings = dayMeetings.slice(0, 2);
+                const visibleTasks = dayTasks.slice(0, Math.max(0, 4 - visibleMeetings.length));
+                const visibleMilestones = dayMilestones.slice(0, Math.max(0, 4 - visibleMeetings.length - visibleTasks.length));
+                const calendarItemsCount = dayMeetings.length + dayTasks.length + dayMilestones.length;
+
+                return (
+                  <div
+                    key={dayKey}
+                    className="min-h-[132px] border-r border-b border-[#E1E4E8] bg-white p-2 text-left transition-colors"
+                    title={`${formatTimelineDate(day)} - ${dayMeetings.length} Outlook events, ${dayTasks.length} project tasks, ${dayMilestones.length} milestones`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-wm-navy">
+                        {day.getDate()}
+                      </span>
+                      {calendarItemsCount > 3 && (
+                        <span className="text-[8.5px] font-mono font-bold text-on-surface-variant">
+                          +{calendarItemsCount - 3}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      {visibleMeetings.map(meeting => (
+                        <span
+                          key={meeting.id}
+                          className="block truncate rounded border border-[#0078d4]/25 bg-[#deecf9] px-2 py-1 text-[9px] font-bold text-[#0078d4]"
+                          title={`${meeting.time} - ${meeting.title} (${meeting.location})`}
+                        >
+                          {meeting.time} {meeting.title}
+                        </span>
+                      ))}
+                      {visibleTasks.map(task => (
+                        <span
+                          key={`${dayKey}-${task.id}`}
+                          className={`block truncate rounded border px-2 py-1 text-[9px] font-bold ${getCalendarTaskClassName(task)}`}
+                          title={task.title}
+                        >
+                          {task.title}
+                        </span>
+                      ))}
+                      {visibleMilestones.map(milestone => (
+                        <span
+                          key={milestone.id}
+                          className={`block truncate rounded border px-2 py-1 text-[9px] font-bold ${
+                            milestone.category === 'intern'
+                              ? 'border-wm-royal/30 bg-[#EAF4FF] text-wm-royal'
+                              : 'border-shoutout-gold/35 bg-[#FFF7D6] text-[#8A6500]'
+                          }`}
+                          title={milestone.title}
+                        >
+                          {milestone.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-[#F1F4F6] text-[9px] font-mono font-bold text-on-surface-variant uppercase">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#0078d4]" /> Outlook Event</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#0072CE]" /> Project Task</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-shoutout-gold" /> Milestone</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 font-sans">
@@ -847,22 +1301,31 @@ export default function ProjectBoardView({
             <div className="xl:col-span-5 bg-white border border-[#E1E4E8] rounded-xl p-6 shadow-sm">
               <div className="pb-3 border-b border-[#F1F4F6] mb-5">
                 <span className="text-[9.5px] font-bold font-mono text-on-surface-variant uppercase tracking-wider">Workload Schedule Configuration</span>
-                <h4 className="font-bold text-sm text-wm-navy mt-1">Interactive Gantt Gantt-Adjusters</h4>
+                <h4 className="font-bold text-sm text-wm-navy mt-1">Task Windows</h4>
               </div>
 
               {/* Tasks schedule adjusters */}
               <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2">
-                {tasks.map(task => {
-                  const currentStart = task.startDaysOffset || 2;
-                  const currentDuration = task.durationDays || 5;
+                {timelineTasks.length === 0 ? (
+                  <div className="border border-dashed border-[#D0D5DD] rounded-lg p-6 text-center">
+                    <p className="text-xs font-bold text-on-surface-variant">No tasks match the current search.</p>
+                  </div>
+                ) : timelineTasks.map(task => {
+                  const { startOffset, duration, startDate, endDate } = getTaskWindow(task);
 
                   return (
                     <div key={task.id} className="p-3.5 border border-neutral-100 bg-neutral-50/50 rounded-lg hover:bg-neutral-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-bold text-xs text-wm-navy line-clamp-1 max-w-[240px]">{task.title}</h5>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-xs text-wm-navy line-clamp-1 max-w-[240px]" title={task.title}>{task.title}</h5>
+                          <p className="text-[9px] font-mono font-bold text-on-surface-variant uppercase mt-1">
+                            {formatTimelineDate(startDate)} - {formatTimelineDate(endDate)}
+                          </p>
+                        </div>
                         <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded ${
                           task.status === 'done' ? 'bg-[#d4edda] text-status-success' :
-                          task.status === 'progress' ? 'bg-[#e7f3ff] text-wm-royal' : 'bg-gray-100 text-on-surface-variant'
+                          task.status === 'progress' ? 'bg-[#e7f3ff] text-wm-royal' :
+                          task.status === 'review' ? 'bg-[#FFF7D6] text-[#9A6B00]' : 'bg-gray-100 text-on-surface-variant'
                         }`}>
                           {task.status}
                         </span>
@@ -875,12 +1338,12 @@ export default function ProjectBoardView({
                           <input
                             type="range"
                             min="1"
-                            max="14"
-                            value={currentStart}
+                            max={TIMELINE_TOTAL_DAYS}
+                            value={startOffset}
                             onChange={(e) => handleUpdateScheduleOffset(task.id, parseInt(e.target.value))}
                             className="flex-1 accent-wm-royal"
                           />
-                          <span className="text-[10px] font-mono font-extrabold w-8 text-right text-wm-royal">Day {currentStart}</span>
+                          <span className="text-[10px] font-mono font-extrabold w-12 text-right text-wm-royal">Day {startOffset}</span>
                         </div>
 
                         {/* Duration controls */}
@@ -888,13 +1351,13 @@ export default function ProjectBoardView({
                           <label className="text-[9px] font-mono text-on-surface-variant font-bold uppercase w-20 shrink-0">Duration Scope:</label>
                           <input
                             type="range"
-                            min="2"
+                            min="1"
                             max="14"
-                            value={currentDuration}
+                            value={duration}
                             onChange={(e) => handleUpdateScheduleDuration(task.id, parseInt(e.target.value))}
                             className="flex-1 accent-shoutout-gold"
                           />
-                          <span className="text-[10px] font-mono font-extrabold w-8 text-right text-shoutout-gold">{currentDuration}d</span>
+                          <span className="text-[10px] font-mono font-extrabold w-12 text-right text-shoutout-gold">{duration}d</span>
                         </div>
                       </div>
                     </div>
@@ -912,70 +1375,85 @@ export default function ProjectBoardView({
                 {/* Visual grid timeline column headers */}
                 <div className="grid grid-cols-12 border-b border-gray-200 pb-3 mb-4 text-center select-none font-mono text-[9px] font-bold text-on-surface-variant uppercase">
                   <div className="col-span-3 text-left font-bold text-wm-navy">Work Item Name</div>
-                  <div className="col-span-2 border-l border-gray-100">Week 1 (Sep 15)</div>
-                  <div className="col-span-3 border-l border-gray-100">Week 2 (Sep 22)</div>
-                  <div className="col-span-2 border-l border-gray-100">Week 3 (Sep 29)</div>
-                  <div className="col-span-2 border-l border-gray-100">Week 4 (Oct 06)</div>
+                  <div className="col-span-9 grid grid-cols-6">
+                    {timelineWeekLabels.map(week => (
+                      <div key={week.id} className="border-l border-gray-100 first:border-l-0">
+                        <span>{week.label}</span>
+                        <span className="block text-[8px] font-semibold normal-case">{week.date}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Vertical Gantt list plot lines */}
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                  {tasks.map(task => {
-                    const offset = task.startDaysOffset || 2;
-                    const duration = task.durationDays || 5;
+                  {timelineTasks.length === 0 ? (
+                    <div className="border border-dashed border-[#D0D5DD] rounded-lg p-6 text-center">
+                      <p className="text-xs font-bold text-on-surface-variant">No timeline rows match the current search.</p>
+                    </div>
+                  ) : timelineTasks.map(task => {
+                    const { duration, startDate, endDate } = getTaskWindow(task);
+                    const taskAssignee = getTaskAssignee(task);
                     const isDone = task.status === 'done';
 
-                    // Compute grid percentages or classes (e.g. 15 columns for the timeline)
-                    // We allocate 9 columns of the timeline grid for drawing bars, since total columns are 12, and 3 are for title prefix!
                     return (
-                      <div key={task.id} className="grid grid-cols-12 items-center min-h-[38px] hover:bg-neutral-50 rounded pl-1 pr-1 py-1">
+                      <div key={task.id} className="grid grid-cols-12 items-center min-h-[70px] hover:bg-neutral-50 rounded pl-1 pr-1 py-2">
                         
                         {/* Title col (span 3) */}
-                        <div className="col-span-3 text-left pr-2 text-xs font-bold text-wm-navy line-clamp-1" title={task.title}>
-                          {task.title}
+                        <div className="col-span-3 text-left pr-2" title={task.title}>
+                          <h5 className="text-xs font-bold text-wm-navy line-clamp-1">{task.title}</h5>
+                          <div className="mt-2 grid grid-cols-1 gap-0.5 text-[8.5px] font-mono font-bold uppercase text-on-surface-variant">
+                            <span className="truncate">Owner: {taskAssignee?.name ?? 'Unassigned'}</span>
+                            <span className="truncate">{task.status} - {task.priority}</span>
+                            <span className="truncate">{formatTimelineDate(startDate)} - {formatTimelineDate(endDate)}</span>
+                          </div>
                         </div>
 
                         {/* Gantt space columns (span 9 allocated) */}
-                        <div className="col-span-9 h-6 relative bg-gray-50 border border-gray-100 rounded-md overflow-hidden">
+                        <div className="col-span-9 h-9 relative bg-gray-50 border border-gray-100 rounded-md overflow-hidden">
+                          <div className="absolute inset-0 grid grid-cols-6">
+                            {timelineWeekLabels.map(week => (
+                              <span key={`${task.id}-${week.id}`} className="border-l border-gray-100 first:border-l-0" />
+                            ))}
+                          </div>
+                          <div
+                            className="absolute top-0 bottom-0 w-px bg-wm-royal/40 z-10"
+                            style={{ left: currentTimelineLeft }}
+                            title={`${currentProjectMilestone?.title ?? 'Current project marker'}: ${formatTimelineDate(currentScheduleDate)}`}
+                          />
+                          {sortedProjectMilestones.map(milestone => {
+                            const milestoneOffset = getMilestoneOffset(milestone.date);
+                            if (milestoneOffset < 1 || milestoneOffset > TIMELINE_TOTAL_DAYS) return null;
+
+                            return (
+                              <div
+                                key={`${task.id}-${milestone.id}`}
+                                className={`absolute top-0 bottom-0 w-px z-10 ${
+                                  milestone.status === 'current' ? 'bg-wm-royal/60' : 'bg-shoutout-gold/55'
+                                }`}
+                                style={{ left: `${((milestoneOffset - 1) / TIMELINE_TOTAL_DAYS) * 100}%` }}
+                                title={`${milestone.title}: ${formatTimelineDate(parseTimelineDate(milestone.date))}`}
+                              />
+                            );
+                          })}
                           {/* Inner bar representing calendar window timeline block */}
                           <div 
-                            className={`absolute h-5 top-0.5 rounded shadow-sm text-white font-mono text-[8px] font-bold flex items-center px-2 select-none overflow-hidden truncate transition-all duration-300 ${
+                            className={`absolute h-7 top-1 rounded shadow-sm text-white font-mono text-[8.5px] font-bold flex items-center px-2 select-none overflow-hidden truncate transition-all duration-300 ${
                               isDone ? 'bg-[#28A745] hover:bg-[#218838]' :
                               task.status === 'progress' ? 'bg-[#0072CE] hover:bg-wm-royal' :
                               task.status === 'review' ? 'bg-[#F2A900] text-neutral-900 border border-amber-300 hover:bg-amber-500' :
                               task.status === 'backlog' ? 'bg-neutral-400 hover:bg-neutral-500' : 'bg-neutral-500'
                             }`}
-                            style={{ 
-                              left: `${(offset / 15) * 100}%`, 
-                              width: `${(duration / 15) * 100}%` 
-                            }}
+                            style={getTimelineBarStyle(task)}
+                            title={`${task.title}: ${formatTimelineDate(startDate)} - ${formatTimelineDate(endDate)}`}
                           >
-                            <span className="truncate">{task.priority} Priority • {duration}d</span>
+                            <span className="truncate">{duration}d - {task.priority}</span>
                           </div>
                         </div>
 
                       </div>
                     );
                   })}
-                </div>
-
-                {/* Milestone timeline markers */}
-                <div className="mt-8 border-t border-neutral-200 pt-5 select-none font-sans text-xs">
-                  <h4 className="font-bold text-xs text-wm-navy uppercase tracking-wider mb-3">Commitment Milestones Scheduled</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 bg-neutral-50 p-2.5 rounded border border-gray-150">
-                      <span className="text-[10px] font-mono font-bold bg-[#E1E4E8] text-on-surface-variant px-2 py-0.5 rounded">WEEK 1</span>
-                      <p className="font-bold text-xs text-wm-navy">SSO Integration Architecture Handshake</p>
-                    </div>
-                    <div className="flex items-center gap-3 bg-neutral-50 p-2.5 rounded border border-gray-150">
-                      <span className="text-[10px] font-mono font-bold bg-[#FAFBCF] text-on-surface px-2 py-0.5 rounded border border-[#E1E468]">WEEK 3</span>
-                      <p className="font-bold text-xs text-wm-navy">Mid-Term Intern Deliverables Coordinator Audit</p>
-                    </div>
-                    <div className="flex items-center gap-3 bg-neutral-50 p-2.5 rounded border border-gray-150">
-                      <span className="text-[10px] font-mono font-bold bg-[#e7f3ff] text-wm-royal px-2 py-0.5 rounded">WEEK 4</span>
-                      <p className="font-bold text-xs text-wm-navy">Consulting Case Presentation Cohort Rehearsal</p>
-                    </div>
-                  </div>
                 </div>
 
               </div>

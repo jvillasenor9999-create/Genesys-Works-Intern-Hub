@@ -24,6 +24,17 @@ export interface Task {
   }[];
 }
 
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  date: string;
+  category: 'architecture' | 'delivery' | 'review' | 'presentation' | 'intern';
+  status: 'completed' | 'current' | 'upcoming';
+  description?: string;
+  createdByUserId?: string;
+  createdByName?: string;
+}
+
 export interface Shoutout {
   id: string;
   nominee: string;

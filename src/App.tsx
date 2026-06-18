@@ -16,7 +16,8 @@ import {
   ManagedUserRole,
   CohortInternProfile,
   Contact,
-  MentorVolunteerRequest
+  MentorVolunteerRequest,
+  ProjectMilestone
 } from './types';
 import { 
   INITIAL_TASKS, 
@@ -29,7 +30,8 @@ import {
   INITIAL_CONTACTS, 
   INITIAL_FAQS,
   QUICK_LINKS,
-  MEETINGS
+  MEETINGS,
+  PROJECT_MILESTONES
 } from './data';
 
 // Imports components
@@ -141,6 +143,7 @@ export default function App() {
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQS);
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [mentorVolunteerRequests, setMentorVolunteerRequests] = useState<MentorVolunteerRequest[]>([]);
+  const [projectMilestones, setProjectMilestones] = useState<ProjectMilestone[]>(PROJECT_MILESTONES);
   const [brandProgress, setBrandProgress] = useState<number>(42);
   const [meetings, setMeetings] = useState<Meeting[]>(MEETINGS);
 
@@ -189,6 +192,7 @@ export default function App() {
     setFaqItems(INITIAL_FAQS);
     setContacts(INITIAL_CONTACTS);
     setMentorVolunteerRequests([]);
+    setProjectMilestones(PROJECT_MILESTONES);
     setMeetings(MEETINGS);
     setBrandProgress(42);
     setUserNickname('Alex Rivera');
@@ -411,6 +415,9 @@ export default function App() {
             permissions={permissions}
             managedUsers={managedUsers}
             activeInternUserId={activeInternUser?.id ?? ''}
+            projectMilestones={projectMilestones}
+            setProjectMilestones={setProjectMilestones}
+            meetings={meetings}
           />
         );
       case 'learning-hub':
