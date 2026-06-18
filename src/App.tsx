@@ -14,7 +14,9 @@ import {
   InternMentorPreference,
   ManagedUser,
   ManagedUserRole,
-  CohortInternProfile
+  CohortInternProfile,
+  Contact,
+  MentorVolunteerRequest
 } from './types';
 import { 
   INITIAL_TASKS, 
@@ -137,6 +139,8 @@ export default function App() {
   const [shoutouts, setShoutouts] = useState<Shoutout[]>(SHOUTOUTS);
   const [roadmap, setRoadmap] = useState<RoadmapTask[]>(ONBOARDING_ROADMAP);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQS);
+  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
+  const [mentorVolunteerRequests, setMentorVolunteerRequests] = useState<MentorVolunteerRequest[]>([]);
   const [brandProgress, setBrandProgress] = useState<number>(42);
   const [meetings, setMeetings] = useState<Meeting[]>(MEETINGS);
 
@@ -183,6 +187,8 @@ export default function App() {
     setShoutouts(SHOUTOUTS);
     setRoadmap(ONBOARDING_ROADMAP);
     setFaqItems(INITIAL_FAQS);
+    setContacts(INITIAL_CONTACTS);
+    setMentorVolunteerRequests([]);
     setMeetings(MEETINGS);
     setBrandProgress(42);
     setUserNickname('Alex Rivera');
@@ -420,8 +426,13 @@ export default function App() {
       case 'contacts':
         return (
           <ContactsView
-            contacts={INITIAL_CONTACTS}
+            contacts={contacts}
+            setContacts={setContacts}
+            mentorVolunteerRequests={mentorVolunteerRequests}
+            setMentorVolunteerRequests={setMentorVolunteerRequests}
             searchQuery={searchQuery}
+            userRole={userRole}
+            triggerToast={triggerToast}
           />
         );
       case 'faq':

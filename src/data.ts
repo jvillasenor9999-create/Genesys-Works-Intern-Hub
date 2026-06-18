@@ -409,6 +409,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Career Advisor',
     department: 'Product Engineering',
     status: 'Willing to help',
+    email: 's.anderson@genesysworks.org',
+    linkedinUrl: 'https://www.linkedin.com/in/sarah-anderson',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAhQBkLur8Qcnr9X1RQZ509yOk5irHztceU9QDrol70pd0ALSsY04zG7JPTFt-01omvuEqVTtHmYKJ61JsA-vXSMDmD-G2wvaEOzliTWd3IwyBV3z3RMf0_b6cVtCptqSeQCSUl0LD9bKaFDqW4AgJqZW7QO5yZRPzSb-HZTvpBtCc35rhlkufbXNyhW9z7H5SzVoBRzTJm2J7XszwPyrr4iLZUMOPSyY5YnSfXQre-8vaoiGYLT6pTbwD8WK16GBLWKsfe2uib4GI'
   },
   {
@@ -417,6 +419,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Mentor',
     department: 'Data & Analytics',
     status: 'Willing to help',
+    email: 'm.chen@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/marcus-chen',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDzU9z_XUzA2i2mRDEA3GdgFDX0fvc0gfA3XK4RSsMCLaM61CVwbedWRLchnKdVLIG9t-0jJsqPU3exxu2STW7SOxT8DHvCrSgaNfsEfSVAaWCXODjqLFWfDDSg6mzxHaMrjwRqFbe6SIZrTgbd0DXqKBV0nxZqOBjUJNnQlTMxpQXRXZ-rFZVk9XIlEUiibydxPAgcDtPkAs_SGdlHh87l_SiZ8R-B3n1rG4lDMMSDwHrstemlKethzRSdHXdOSrbvyqgXIGScxzY'
   },
   {
@@ -425,6 +429,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Project Manager',
     department: 'Operations Excellence',
     status: 'In Meeting',
+    email: 'j.lee@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/jasmine-lee',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGdqcGBvWzX4W0pLtK6WK5xNDjzekwKynlTNOnSVihl0q0SrKpTV5UsU7Fgh7mdUCozYXSZzbcHKXnry8SQwoOIo3_MqdxFlC44NrKItrmou3Ip_3ywtFIOUV2mTk6wij7Lurwx64hu8f1ncQk9bMg5KctsKGNp-omd4g3H1CfK1sLqNdUGZWIM1QjZnb-LbVlz13B60JJ_n8eEmNxiavXUEhB3JZAIEVwjGbe2ABjV-ZQ_Ndwc_x5oe44U2PPSrCMDDD65BITo0w'
   },
   {
@@ -433,6 +439,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Mentor',
     department: 'Customer Experience',
     status: 'Willing to help',
+    email: 'd.park@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/david-park',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAuHLJxWkdtG2S4JlbozWO0jRwQCYOiUUc0sr6QTZXdp5SOZo36w-XRHV2awgXyM7yAII2Lt_onrAVcJhncH673qxiuzhfbmuvNFDrVrhOA0HwU5sQ7c_cQpbYy3m09MjRDYpfQkWf1dtj54dMcJOYHZnyYZoYP_VgnrXuMSiw84sicrx8N_SHH6W76sJYgcNRKvvhRuWxbQpKmDFsg7fUNpICWMesrlTeMMOvL2JCu4MfR1_SU46gjKzOxodgBJJWPi-4AYK-K6Kk'
   },
   {
@@ -441,6 +449,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Career Advisor',
     department: 'Product Engineering',
     status: 'Willing to help',
+    email: 'e.rodriguez@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/elena-rodriguez',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIZeHsQeLEk5ikBraGzVgdsJqjS2nl1WIjZmarGYhzjh4m-nRNMefLEZDmebvBYRze3hBdQJiv79B3SFapHeFXpb5jVlxYqE22ShIfQu6JkrK7kL_YdYbtH1k-18FggOBhHYqYmFKyg0RSPvjFUj3w8Oqv6ASx57Js3iIU71qmtiHvlIyu511SwpqThzshlpXZTH8i3VxW5ilKER2lmP1HXTC-ZtjgogrFFdoE3X3gDa2is3oUdjGcf4MQd9lYVhTFK4-_voJAjsM'
   },
   {
@@ -449,6 +459,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Project Manager',
     department: 'Data & Analytics',
     status: 'Offline',
+    email: 't.wright@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/thomas-wright',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBBq150J1Esqj7wvuKg1A9Jlpt40Y6DPaXdD8hLk3kQMNdgL3OCYi0kWvQbRbo2zGoxsNbAEY4I7qozuozElACw38BLNXzm-5en7G3MSeCAZnxFadzLNYh2yZN7pjNnRbY6dxadX3OBNGgxb13IX9373iuHq6juTAZOHSMg1y7Q-G54EnV0YQTJXa_sw3St9lZtXe1fxn1fJYrZsQhlRww5G83uMS9k0meI8znmnWYdhSGoQSAwUroD1OxFgLColRVCGSTFw3ineWs'
   }
 ];

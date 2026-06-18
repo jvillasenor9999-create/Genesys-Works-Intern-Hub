@@ -97,7 +97,19 @@ export interface Contact {
   role: 'Career Advisor' | 'Mentor' | 'Project Manager';
   department: 'Product Engineering' | 'Customer Experience' | 'Operations Excellence' | 'Data & Analytics';
   status: 'Willing to help' | 'In Meeting' | 'Offline';
+  email: string;
+  linkedinUrl?: string;
   avatar: string;
+}
+
+export interface MentorVolunteerRequest {
+  id: string;
+  name: string;
+  email: string;
+  linkedinUrl?: string;
+  interestedRoles: string[];
+  submittedAt: string;
+  status: 'pending' | 'approved' | 'declined';
 }
 
 export interface FaqItem {
