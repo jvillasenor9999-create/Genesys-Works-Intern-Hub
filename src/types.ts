@@ -71,6 +71,21 @@ export interface RoadmapTask {
   actionGuide?: string;
 }
 
+export interface OnboardingContentSlot {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface OnboardingCultureValuesContent {
+  eyebrow: string;
+  title: string;
+  description: string;
+  expectations: OnboardingContentSlot[];
+  values: OnboardingContentSlot[];
+  footerNote: string;
+}
+
 export interface TechnicalGuide {
   id: string;
   title: string;

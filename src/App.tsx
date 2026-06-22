@@ -23,6 +23,7 @@ import {
   INITIAL_TASKS, 
   SHOUTOUTS, 
   ONBOARDING_ROADMAP, 
+  ONBOARDING_CULTURE_VALUES_CONTENT,
   TECHNICAL_GUIDES, 
   PROFESSIONAL_SKILLS, 
   INTERNAL_SYSTEMS, 
@@ -457,6 +458,7 @@ export default function App() {
           <OnboardingView
             roadmap={roadmap}
             setRoadmap={setRoadmap}
+            cultureValuesContent={ONBOARDING_CULTURE_VALUES_CONTENT}
             brandProgress={brandProgress}
             setBrandProgress={setBrandProgress}
             userRole={userRole}

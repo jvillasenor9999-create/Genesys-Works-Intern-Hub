@@ -1,4 +1,4 @@
-import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem, ProjectMilestone } from './types';
+import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, OnboardingCultureValuesContent, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem, ProjectMilestone } from './types';
 
 export const INITIAL_TASKS: Task[] = [
   {
@@ -352,6 +352,57 @@ export const ONBOARDING_ROADMAP: RoadmapTask[] = [
     category: '30-day'
   }
 ];
+
+export const ONBOARDING_CULTURE_VALUES_CONTENT: OnboardingCultureValuesContent = {
+  eyebrow: 'Culture & Values',
+  title: 'Intern Expectations & West Monroe Values',
+  description: 'This page is reserved for the approved onboarding guidance interns should review during Week 1. Replace these slots with official expectations and values copy when it is ready.',
+  expectations: [
+    {
+      id: 'expectation-slot-1',
+      title: 'Intern Expectation Slot 1',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-2',
+      title: 'Intern Expectation Slot 2',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-3',
+      title: 'Intern Expectation Slot 3',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-4',
+      title: 'Intern Expectation Slot 4',
+      description: 'Approved intern expectation wording pending.'
+    }
+  ],
+  values: [
+    {
+      id: 'value-slot-1',
+      title: 'West Monroe Value Slot 1',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-2',
+      title: 'West Monroe Value Slot 2',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-3',
+      title: 'West Monroe Value Slot 3',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-4',
+      title: 'West Monroe Value Slot 4',
+      description: 'Approved West Monroe value wording pending.'
+    }
+  ],
+  footerNote: 'Official values and expectation wording should be supplied by the program team before this page is treated as final policy guidance.'
+};
 
 export const TECHNICAL_GUIDES: TechnicalGuide[] = [
   {
