@@ -17,7 +17,8 @@ import {
   CohortInternProfile,
   Contact,
   MentorVolunteerRequest,
-  ProjectMilestone
+  ProjectMilestone,
+  OnboardingCultureValuesContent
 } from './types';
 import { 
   INITIAL_TASKS, 
@@ -141,6 +142,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>(DEFAULT_TASKS);
   const [shoutouts, setShoutouts] = useState<Shoutout[]>(SHOUTOUTS);
   const [roadmap, setRoadmap] = useState<RoadmapTask[]>(ONBOARDING_ROADMAP);
+  const [onboardingCultureValuesContent, setOnboardingCultureValuesContent] = useState<OnboardingCultureValuesContent>(ONBOARDING_CULTURE_VALUES_CONTENT);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQS);
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [mentorVolunteerRequests, setMentorVolunteerRequests] = useState<MentorVolunteerRequest[]>([]);
@@ -190,6 +192,7 @@ export default function App() {
     setTasks(DEFAULT_TASKS);
     setShoutouts(SHOUTOUTS);
     setRoadmap(ONBOARDING_ROADMAP);
+    setOnboardingCultureValuesContent(ONBOARDING_CULTURE_VALUES_CONTENT);
     setFaqItems(INITIAL_FAQS);
     setContacts(INITIAL_CONTACTS);
     setMentorVolunteerRequests([]);
@@ -458,11 +461,13 @@ export default function App() {
           <OnboardingView
             roadmap={roadmap}
             setRoadmap={setRoadmap}
-            cultureValuesContent={ONBOARDING_CULTURE_VALUES_CONTENT}
+            cultureValuesContent={onboardingCultureValuesContent}
+            setCultureValuesContent={setOnboardingCultureValuesContent}
             brandProgress={brandProgress}
             setBrandProgress={setBrandProgress}
             userRole={userRole}
             permissions={permissions}
+            triggerToast={triggerToast}
           />
         );
       case 'settings':
