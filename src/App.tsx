@@ -10,15 +10,21 @@ import {
   Meeting,
   UserRole,
   UserPermissions,
-  InternProfile,
   InternHardwarePreference,
   InternMentorPreference,
-  ManagedUser
+  ManagedUser,
+  ManagedUserRole,
+  CohortInternProfile,
+  Contact,
+  MentorVolunteerRequest,
+  ProjectMilestone,
+  OnboardingCultureValuesContent
 } from './types';
 import { 
   INITIAL_TASKS, 
   SHOUTOUTS, 
   ONBOARDING_ROADMAP, 
+  ONBOARDING_CULTURE_VALUES_CONTENT,
   TECHNICAL_GUIDES, 
   PROFESSIONAL_SKILLS, 
   INTERNAL_SYSTEMS, 
@@ -26,7 +32,8 @@ import {
   INITIAL_CONTACTS, 
   INITIAL_FAQS,
   QUICK_LINKS,
-  MEETINGS
+  MEETINGS,
+  PROJECT_MILESTONES
 } from './data';
 
 // Imports components
@@ -44,24 +51,86 @@ import OnboardingView from './components/views/OnboardingView';
 import SettingsView from './components/views/SettingsView';
 import InternsDashboard from './components/views/InternsDashboard';
 
-const DEFAULT_INTERN_PROFILE: InternProfile = {
-  id: 'intern-alex-rivera',
-  name: 'Alex Rivera',
-  email: 'a.rivera@genesysworks.org',
-  hardwarePreference: 'MacBook Pro',
-  mentorPreference: 'Marcus Chen'
-};
+const ALEX_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8';
+const JORDAN_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120';
+const MARCUS_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDqQoFrciSutG-llI_5OmFesWaHSbfKbJ89PWvuoCpGtAGdAhoNIFwe6Op-LyyZWK-gHRo8DS_fj-7qI7FBrxz7hJ7hpHAyiWlUPp7VObpvLExELVn6XntTeXw4hX1hDW6aH1fKXemmsccxJC4ng1B5SzEiozR2oTeRVNBq4rKjopSGkfLBC38v1hcawwN5mA1SBQXNNtf23O2stHfICljEhzzjifaiSRDGR3EEuBoqgFpcTXgCw6sAFu_TlzhQQ-pYGXWJrJFxdM8';
+const DAVID_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBlFZmdGnXv88Iq2TLd4u47C1qVJKNlcNnWUH6Y8l7-SvFHMUH1zH1AAvi6AtCowAqRHIO-0tmyIma9Pff_OX34Fl_mJRmzFJeulL8_JTc7lwvhM_B5QPjGv-VNbIjjZGjZ_B4PQrxkyOjuVmhaRm4CPIwZ2gffZawnHJOOl8QaQIF85yibmOP6geQ8TIg5hfGL7tmaRX9TXcVJeDMdlONWgEJHw4K3FoqQy_8_L7RD76ogYVkAYX63Vzr9spX08CIo-WW01p6Lo_k';
+const SARAH_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmwwOwBpBgsYSE1SoGXp1Wa7o_edMgDb7qj4xRspqVRNb5EdBl32A40gQj1ZJrL6Od9tZVzh6G27x8T9XL3Zw0r9ePCTrbcVt-VhSNIM-61Nr0YnAlEnKwEk7fb0-WWuE20Wg6rf4cDnqq0PbYmyVB_EjxKbQXKqZffdowXXHbFsqOzgpIUsL90dPkYnmYTN_ZtUOWwhZvbt2-4jTMURjCZAqG9YM0gycWTQyJpzafPlCzxgBFwjLZZvitek1BD8niZSu9hXNqt9g';
+const TYLER_AVATAR = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120';
+const JOHN_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=120';
+const DEFAULT_NEW_INTERN_AVATAR = 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=120';
 
 const DEFAULT_MANAGED_USERS: ManagedUser[] = [
-  { id: 'usr-1', name: 'Alex Rivera', email: 'a.rivera@genesysworks.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Active', lastLogin: 'Just now', hardware: 'MacBook Pro' },
-  { id: 'usr-2', name: 'Jordan Smith', email: 'j.smith@genesysworks.org', role: 'Summer Intern', department: 'Data & Analytics', status: 'Active', lastLogin: '12 mins ago', hardware: 'Lenovo ThinkPad' },
-  { id: 'usr-3', name: 'Marcus Chen', email: 'm.chen@westmonroe.com', role: 'Technical Mentor', department: 'Data & Analytics', status: 'Active', lastLogin: '1 hour ago', hardware: 'MacBook Pro' },
-  { id: 'usr-4', name: 'David Park', email: 'd.park@westmonroe.com', role: 'Technical Mentor', department: 'Customer Experience', status: 'Active', lastLogin: '3 hours ago', hardware: 'Lenovo ThinkPad' },
-  { id: 'usr-5', name: 'Sarah Anderson', email: 's.anderson@genesysworks.org', role: 'Program Coordinator', department: 'Career Development', status: 'Active', lastLogin: 'Yesterday', hardware: 'Lenovo ThinkPad' },
-  { id: 'usr-6', name: 'Samantha Vance', email: 's.vance@genesysworks.org', role: 'Administrator', department: 'Operations', status: 'Active', lastLogin: '2 days ago', hardware: 'MacBook Pro' },
-  { id: 'usr-7', name: 'Tyler Durden', email: 't.durden@genesysworks.org', role: 'Summer Intern', department: 'Operations', status: 'On Vacation', lastLogin: 'Last week', hardware: 'Lenovo ThinkPad' },
-  { id: 'usr-8', name: 'John Doe', email: 'j.doe@unprovisioned.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Provisioning', lastLogin: 'Never', hardware: 'MacBook Pro' }
+  { id: 'usr-1', name: 'Alex Rivera', email: 'a.rivera@genesysworks.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Active', lastLogin: 'Just now', hardware: 'MacBook Pro', avatar: ALEX_AVATAR, mentorPreference: 'Marcus Chen' },
+  { id: 'usr-2', name: 'Jordan Smith', email: 'j.smith@genesysworks.org', role: 'Summer Intern', department: 'Data & Analytics', status: 'Active', lastLogin: '12 mins ago', hardware: 'Lenovo ThinkPad', avatar: JORDAN_AVATAR, mentorPreference: 'Marcus Chen' },
+  { id: 'usr-3', name: 'Marcus Chen', email: 'm.chen@westmonroe.com', role: 'Technical Mentor', department: 'Data & Analytics', status: 'Active', lastLogin: '1 hour ago', hardware: 'MacBook Pro', avatar: MARCUS_AVATAR },
+  { id: 'usr-4', name: 'David Park', email: 'd.park@westmonroe.com', role: 'Technical Mentor', department: 'Customer Experience', status: 'Active', lastLogin: '3 hours ago', hardware: 'Lenovo ThinkPad', avatar: DAVID_AVATAR },
+  { id: 'usr-5', name: 'Sarah Anderson', email: 's.anderson@genesysworks.org', role: 'Program Coordinator', department: 'Career Development', status: 'Active', lastLogin: 'Yesterday', hardware: 'Lenovo ThinkPad', avatar: SARAH_AVATAR },
+  { id: 'usr-6', name: 'Samantha Vance', email: 's.vance@genesysworks.org', role: 'Administrator', department: 'Operations', status: 'Active', lastLogin: '2 days ago', hardware: 'MacBook Pro', avatar: DEFAULT_NEW_INTERN_AVATAR },
+  { id: 'usr-7', name: 'Tyler Durden', email: 't.durden@genesysworks.org', role: 'Summer Intern', department: 'Operations', status: 'On Vacation', lastLogin: 'Last week', hardware: 'Lenovo ThinkPad', avatar: TYLER_AVATAR, mentorPreference: 'Sarah Anderson' },
+  { id: 'usr-8', name: 'John Doe', email: 'j.doe@unprovisioned.org', role: 'Summer Intern', department: 'Product Engineering', status: 'Provisioning', lastLogin: 'Never', hardware: 'MacBook Pro', avatar: JOHN_AVATAR, mentorPreference: 'David Park' }
 ];
+
+const createDefaultCohortProfile = (userId: string): CohortInternProfile => ({
+  userId,
+  onboardingChecklist: [
+    { id: `${userId}-ob-1`, title: 'Sign offer letter & background forms', category: 'Pre-Arrival', checked: false },
+    { id: `${userId}-ob-2`, title: 'Complete Genesys bio survey', category: 'Pre-Arrival', checked: false },
+    { id: `${userId}-ob-3`, title: 'Request dynamic laptop procurement keys', category: 'Pre-Arrival', checked: false },
+    { id: `${userId}-ob-4`, title: 'Verify workspace login tokens', category: 'Week 1', checked: false },
+    { id: `${userId}-ob-5`, title: 'Schedule sync with Assigned Onboarding Buddy', category: 'Week 1', checked: false },
+    { id: `${userId}-ob-6`, title: 'Participate in cohort professional ethics seminar', category: 'Week 1', checked: false },
+    { id: `${userId}-ob-7`, title: 'Submit 30-day intern self-alignment logbook', category: '30-Day', checked: false }
+  ],
+  courses: [
+    { id: `${userId}-c-1`, title: 'ServiceNow Fundamentals', progress: 0, category: 'Technical Tooling', type: 'course' },
+    { id: `${userId}-c-2`, title: 'Excel Analytics Deep Dive', progress: 0, category: 'Technical Tooling', type: 'course' },
+    { id: `${userId}-c-3`, title: 'MFA & Enterprise Hardware Guidelines', progress: 0, category: 'Governance', type: 'lab' },
+    { id: `${userId}-c-4`, title: 'Slack & Professional Communication Etiquette', progress: 0, category: 'Professionalism', type: 'video' }
+  ]
+});
+
+const createSeededCohortProfile = (
+  userId: string,
+  checkedItemCount: number,
+  courseProgress: [number, number, number, number]
+): CohortInternProfile => {
+  const profile = createDefaultCohortProfile(userId);
+  return {
+    ...profile,
+    onboardingChecklist: profile.onboardingChecklist.map((item, index) => ({
+      ...item,
+      checked: index < checkedItemCount
+    })),
+    courses: profile.courses.map((course, index) => ({
+      ...course,
+      progress: courseProgress[index] ?? 0
+    }))
+  };
+};
+
+const DEFAULT_COHORT_PROFILES: CohortInternProfile[] = [
+  createSeededCohortProfile('usr-1', 4, [100, 85, 100, 40]),
+  createSeededCohortProfile('usr-2', 3, [40, 10, 100, 90]),
+  createSeededCohortProfile('usr-7', 6, [100, 100, 100, 100]),
+  createSeededCohortProfile('usr-8', 1, [0, 0, 20, 0])
+];
+
+const DEFAULT_ACTIVE_INTERN_USER_ID = 'usr-1';
+
+const createUserAssignee = (user?: ManagedUser) => (
+  user ? { name: user.name, avatar: user.avatar } : undefined
+);
+
+const DEFAULT_TASKS: Task[] = INITIAL_TASKS.map(task => {
+  const assignedUser = task.assignee
+    ? DEFAULT_MANAGED_USERS.find(user => user.role === 'Summer Intern' && user.name === task.assignee?.name)
+    : undefined;
+
+  return assignedUser
+    ? { ...task, assigneeUserId: assignedUser.id, assignee: createUserAssignee(assignedUser) }
+    : task;
+});
 
 export default function App() {
   // Navigation Routing State
@@ -70,10 +139,14 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Primary Interactive States initialized from mockup specs
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(DEFAULT_TASKS);
   const [shoutouts, setShoutouts] = useState<Shoutout[]>(SHOUTOUTS);
   const [roadmap, setRoadmap] = useState<RoadmapTask[]>(ONBOARDING_ROADMAP);
+  const [onboardingCultureValuesContent, setOnboardingCultureValuesContent] = useState<OnboardingCultureValuesContent>(ONBOARDING_CULTURE_VALUES_CONTENT);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQS);
+  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
+  const [mentorVolunteerRequests, setMentorVolunteerRequests] = useState<MentorVolunteerRequest[]>([]);
+  const [projectMilestones, setProjectMilestones] = useState<ProjectMilestone[]>(PROJECT_MILESTONES);
   const [brandProgress, setBrandProgress] = useState<number>(42);
   const [meetings, setMeetings] = useState<Meeting[]>(MEETINGS);
 
@@ -90,9 +163,9 @@ export default function App() {
   const [userNickname, setUserNickname] = useState<string>('Alex Rivera');
   const [userHardwarePreference, setUserHardwarePreference] = useState<InternHardwarePreference>('MacBook Pro');
   const [userMentorPreference, setUserMentorPreference] = useState<InternMentorPreference>('Marcus Chen');
-  const [internProfiles, setInternProfiles] = useState<InternProfile[]>([DEFAULT_INTERN_PROFILE]);
-  const [activeInternProfileId, setActiveInternProfileId] = useState<string>(DEFAULT_INTERN_PROFILE.id);
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>(DEFAULT_MANAGED_USERS);
+  const [cohortProfiles, setCohortProfiles] = useState<CohortInternProfile[]>(DEFAULT_COHORT_PROFILES);
+  const [activeInternUserId, setActiveInternUserId] = useState<string>(DEFAULT_ACTIVE_INTERN_USER_ID);
   const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'permissions' | 'admin-access' | 'database' | 'platform'>('profile');
 
   // Multi-view and Simulation access controls
@@ -104,19 +177,34 @@ export default function App() {
     allowInternsToSelfApproveMilestones: false // Default false to demonstrate permission intercept!
   });
 
+  const summerInternUsers = managedUsers.filter(user => user.role === 'Summer Intern');
+  const activeInternUser = summerInternUsers.find(user => user.id === activeInternUserId) ?? summerInternUsers[0];
+
+  React.useEffect(() => {
+    if (!activeInternUser) return;
+
+    setUserNickname(activeInternUser.name);
+    setUserHardwarePreference(activeInternUser.hardware);
+    setUserMentorPreference(activeInternUser.mentorPreference ?? 'Marcus Chen');
+  }, [activeInternUser]);
+
   const handleResetWorkspace = () => {
-    setTasks(INITIAL_TASKS);
+    setTasks(DEFAULT_TASKS);
     setShoutouts(SHOUTOUTS);
     setRoadmap(ONBOARDING_ROADMAP);
+    setOnboardingCultureValuesContent(ONBOARDING_CULTURE_VALUES_CONTENT);
     setFaqItems(INITIAL_FAQS);
+    setContacts(INITIAL_CONTACTS);
+    setMentorVolunteerRequests([]);
+    setProjectMilestones(PROJECT_MILESTONES);
     setMeetings(MEETINGS);
     setBrandProgress(42);
     setUserNickname('Alex Rivera');
     setUserHardwarePreference('MacBook Pro');
     setUserMentorPreference('Marcus Chen');
-    setInternProfiles([DEFAULT_INTERN_PROFILE]);
-    setActiveInternProfileId(DEFAULT_INTERN_PROFILE.id);
     setManagedUsers(DEFAULT_MANAGED_USERS);
+    setCohortProfiles(DEFAULT_COHORT_PROFILES);
+    setActiveInternUserId(DEFAULT_ACTIVE_INTERN_USER_ID);
     setUserRole('intern');
     setPermissions({
       allowInternsToDeleteTasks: false,
@@ -124,6 +212,47 @@ export default function App() {
       allowInternsToSyncMeetings: true,
       allowInternsToSelfApproveMilestones: false
     });
+  };
+
+  const handleAddInternUser = (newInternUser: ManagedUser) => {
+    setManagedUsers(prev => [...prev, newInternUser]);
+    setCohortProfiles(prev => [...prev, createDefaultCohortProfile(newInternUser.id)]);
+    setActiveInternUserId(newInternUser.id);
+    setUserNickname(newInternUser.name);
+    setUserHardwarePreference(newInternUser.hardware);
+    setUserMentorPreference(newInternUser.mentorPreference ?? 'Marcus Chen');
+  };
+
+  const handleManagedUserRoleChange = (userId: string, newRole: ManagedUserRole) => {
+    const nextActiveInternUser = managedUsers.find(user => (
+      user.id !== userId && user.role === 'Summer Intern'
+    ));
+
+    setManagedUsers(prev => prev.map(user => (
+      user.id === userId ? { ...user, role: newRole } : user
+    )));
+
+    if (newRole === 'Summer Intern') {
+      setCohortProfiles(prev => (
+        prev.some(profile => profile.userId === userId)
+          ? prev
+          : [...prev, createDefaultCohortProfile(userId)]
+      ));
+      return;
+    }
+
+    setTasks(prev => prev.map(task => (
+      task.assigneeUserId === userId
+        ? { ...task, assigneeUserId: undefined, assignee: undefined }
+        : task
+    )));
+
+    if (activeInternUserId === userId && nextActiveInternUser) {
+      setActiveInternUserId(nextActiveInternUser.id);
+      setUserNickname(nextActiveInternUser.name);
+      setUserHardwarePreference(nextActiveInternUser.hardware);
+      setUserMentorPreference(nextActiveInternUser.mentorPreference ?? 'Marcus Chen');
+    }
   };
 
   const handleLoadPresetTasks = (presetType: 'sprint' | 'ops' | 'minimal') => {
@@ -148,10 +277,8 @@ export default function App() {
           priority: 'Medium',
           dueDate: 'Sep 28',
           description: 'Improve animations across secondary dashboard lists. Make sure there is zero flicker when swapping from calendar sync dialogs directly to faq articles.',
-          assignee: {
-            name: userNickname,
-            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8'
-          },
+          assigneeUserId: activeInternUser?.id,
+          assignee: createUserAssignee(activeInternUser),
           comments: []
         },
         {
@@ -185,10 +312,8 @@ export default function App() {
           priority: 'Low',
           dueDate: 'Tomorrow',
           description: 'Review the technical and professional communications guide in the Learning Hub, and practice drafting project-update briefings.',
-          assignee: {
-            name: userNickname,
-            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8'
-          },
+          assigneeUserId: activeInternUser?.id,
+          assignee: createUserAssignee(activeInternUser),
           comments: []
         }
       ];
@@ -234,10 +359,8 @@ export default function App() {
       dueDate: newTaskDueDate,
       description: newTaskDescription,
       comments: [],
-      assignee: {
-        name: 'Alex Rivera',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBPyTh4ZqA7kjWPwR-sCujEJOhg7n16iz7uA67wBEeBWF36WSGZlp0qDliA4zF--C5o_NSxHdnHVGf1DKIQGNsX-bPH7Rd8qDv6XNTxjvx8B98mnsyVk9yHECSaAfB6F6FqGS4zRVOh90q5RnmBG-XnDT-mmtHBH828nU0RT397Ca_IB8kRBYOjoOeTnuWX1OzJhypYPxUQR01GgUe6l3hizgg8vpyipfCa2mfORJTcFZcOu5yVdbcTMroqeSVJSCyoigqx7w0tkJ8'
-      }
+      assigneeUserId: activeInternUser?.id,
+      assignee: createUserAssignee(activeInternUser)
     };
 
     setTasks(prev => [newTask, ...prev]);
@@ -294,6 +417,11 @@ export default function App() {
             setSubTab={setProjectBoardSubTab}
             userRole={userRole}
             permissions={permissions}
+            managedUsers={managedUsers}
+            activeInternUserId={activeInternUser?.id ?? ''}
+            projectMilestones={projectMilestones}
+            setProjectMilestones={setProjectMilestones}
+            meetings={meetings}
           />
         );
       case 'learning-hub':
@@ -309,8 +437,13 @@ export default function App() {
       case 'contacts':
         return (
           <ContactsView
-            contacts={INITIAL_CONTACTS}
+            contacts={contacts}
+            setContacts={setContacts}
+            mentorVolunteerRequests={mentorVolunteerRequests}
+            setMentorVolunteerRequests={setMentorVolunteerRequests}
             searchQuery={searchQuery}
+            userRole={userRole}
+            triggerToast={triggerToast}
           />
         );
       case 'faq':
@@ -328,10 +461,13 @@ export default function App() {
           <OnboardingView
             roadmap={roadmap}
             setRoadmap={setRoadmap}
+            cultureValuesContent={onboardingCultureValuesContent}
+            setCultureValuesContent={setOnboardingCultureValuesContent}
             brandProgress={brandProgress}
             setBrandProgress={setBrandProgress}
             userRole={userRole}
             permissions={permissions}
+            triggerToast={triggerToast}
           />
         );
       case 'settings':
@@ -347,12 +483,12 @@ export default function App() {
             setUserHardwarePreference={setUserHardwarePreference}
             userMentorPreference={userMentorPreference}
             setUserMentorPreference={setUserMentorPreference}
-            internProfiles={internProfiles}
-            setInternProfiles={setInternProfiles}
-            activeInternProfileId={activeInternProfileId}
-            setActiveInternProfileId={setActiveInternProfileId}
+            activeInternUserId={activeInternUser?.id ?? ''}
+            setActiveInternUserId={setActiveInternUserId}
             managedUsers={managedUsers}
             setManagedUsers={setManagedUsers}
+            onAddInternUser={handleAddInternUser}
+            onManagedUserRoleChange={handleManagedUserRoleChange}
             onResetWorkspace={handleResetWorkspace}
             onClearTasks={() => setTasks([])}
             onLoadPresetTasks={handleLoadPresetTasks}
@@ -367,6 +503,12 @@ export default function App() {
             userRole={userRole}
             triggerToast={triggerToast}
             userNickname={userNickname}
+            managedUsers={managedUsers}
+            cohortProfiles={cohortProfiles}
+            setCohortProfiles={setCohortProfiles}
+            tasks={tasks}
+            setTasks={setTasks}
+            activeInternUserId={activeInternUser?.id ?? ''}
           />
         );
       default:
@@ -408,7 +550,7 @@ export default function App() {
           onOpenSettings={() => handleNavigateToTab('settings')}
           brandProgress={brandProgress}
           onNavigateToTab={handleNavigateToTab}
-          userNickname={userNickname}
+          userNickname={activeInternUser?.name ?? userNickname}
           userRole={userRole}
           onSetSettingsSubTab={setSettingsSubTab}
           onOpenSupport={() => setShowSupportModal(true)}

@@ -1,4 +1,4 @@
-import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem } from './types';
+import { Task, Shoutout, QuickLink, Meeting, RoadmapTask, OnboardingCultureValuesContent, TechnicalGuide, ProfessionalSkill, InternalSystem, VideoTutorial, Contact, FaqItem, ProjectMilestone } from './types';
 
 export const INITIAL_TASKS: Task[] = [
   {
@@ -8,6 +8,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'High',
     dueDate: 'Sep 22',
+    startDaysOffset: 5,
+    durationDays: 8,
     description: 'Create a comprehensive OpenAPI/Swagger reference specification detailing SSO auth endpoints, header structures, dynamic token refresh handshakes, and response models. Coordinate with the core platform engineering team for security gate audits.',
     assignee: {
       name: 'Amos Rivera',
@@ -30,6 +32,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Opportunity',
     priority: 'Low',
     dueDate: 'Future Sprint',
+    startDaysOffset: 25,
+    durationDays: 7,
     description: 'Inquire client telemetry layouts used across top Salesforce CRM dashboards. Draft a 3-slide analysis prioritizing spatial efficiency, dark/light contrast configurations, and modular bento layout options.',
     comments: []
   },
@@ -40,6 +44,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'High',
     dueDate: 'Due tomorrow • Project: Internal UX',
+    startDaysOffset: 2,
+    durationDays: 9,
     description: 'Iterate mockup layers on Figma integrating internal client comments. Refine critical metric alignments, navigation spacing ratios, and custom branding palette tokens matching the West Monroe style matrix.',
     assignee: {
       name: 'Alex Rivera',
@@ -63,6 +69,8 @@ export const INITIAL_TASKS: Task[] = [
     priority: 'Medium',
     dueDate: 'Tomorrow',
     progress: 66,
+    startDaysOffset: 4,
+    durationDays: 6,
     description: 'Address overlapping viewport boundaries in CSS flexbox layers on screen sizes below 640px. Make sure learning list modules scroll independently and sidebar folds cleanly without breaking the flow.',
     assignee: {
       name: 'Marcus Chen',
@@ -85,6 +93,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Bug Fix',
     priority: 'High',
     dueDate: 'Due Fri • Project: Client Analytics',
+    startDaysOffset: 9,
+    durationDays: 5,
     description: 'Audit macro formulas across three main data worksheets. Clean up unresolved name references and static lookups, substituting them with dynamic XLOOKUP operations for high security and performance.',
     comments: []
   },
@@ -96,6 +106,8 @@ export const INITIAL_TASKS: Task[] = [
     priority: 'High',
     dueDate: 'Oct 30',
     commentsCount: 3,
+    startDaysOffset: 29,
+    durationDays: 8,
     description: 'Document core engineering workflows, target deliverables, user validation timelines, and team budget allocations for Q4 planning review with executive project sponsors.',
     assignee: {
       name: 'Sarah Anderson',
@@ -125,6 +137,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Completed',
     priority: 'Low',
     dueDate: 'Sep 12',
+    startDaysOffset: 1,
+    durationDays: 3,
     description: 'Verify signature tasks on W-4 forms, standard compliance handbooks, security clearances, and system portal password setup actions. Complete final onboarding quiz check.',
     assignee: {
       name: 'Thomas Wright',
@@ -147,6 +161,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'Medium',
     dueDate: 'Due next week • Internal Development',
+    startDaysOffset: 17,
+    durationDays: 9,
     description: 'Assemble key program milestones, technical skill growth metrics, client service highlights, and final recommendations into a 15-minute presentation slides structure for cohort review.',
     comments: []
   },
@@ -157,6 +173,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Feature',
     priority: 'Medium',
     dueDate: 'Oct 15',
+    startDaysOffset: 20,
+    durationDays: 8,
     description: 'Set up a client-side reactive sandbox where interns can practice lookup constructs, conditional formatting strategies, and pivot table query exercises in standard environments.',
     comments: []
   },
@@ -167,6 +185,8 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Bug Fix',
     priority: 'High',
     dueDate: 'Oct 02',
+    startDaysOffset: 14,
+    durationDays: 6,
     description: 'Formulate safe-handling parameters regarding client identity, PII masking triggers, export logs auditing metrics, and credential retention procedures inside internal Salesforce tenants.',
     comments: []
   },
@@ -177,8 +197,53 @@ export const INITIAL_TASKS: Task[] = [
     type: 'Opportunity',
     priority: 'Low',
     dueDate: 'Oct 28',
+    startDaysOffset: 31,
+    durationDays: 6,
     description: 'Explore template styling layouts utilizing West Monroe theme matrices for executive summary metrics dashboards, client billing reports, and employee utilization analytics.',
     comments: []
+  }
+];
+
+export const PROJECT_MILESTONES: ProjectMilestone[] = [
+  {
+    id: 'milestone-1',
+    title: 'SSO Integration Architecture Handshake',
+    date: '2026-09-15',
+    category: 'architecture',
+    status: 'completed',
+    description: 'Kickoff alignment for identity flows, access assumptions, and the platform integration plan.'
+  },
+  {
+    id: 'milestone-2',
+    title: 'API Documentation Review Gate',
+    date: '2026-09-22',
+    category: 'delivery',
+    status: 'current',
+    description: 'Mentors review endpoint coverage, auth notes, and example request/response completeness.'
+  },
+  {
+    id: 'milestone-3',
+    title: 'Mid-Term Intern Deliverables Audit',
+    date: '2026-09-29',
+    category: 'review',
+    status: 'upcoming',
+    description: 'Coordinator review of committed work, blockers, and progress against the intern project board.'
+  },
+  {
+    id: 'milestone-4',
+    title: 'Consulting Case Presentation Rehearsal',
+    date: '2026-10-06',
+    category: 'presentation',
+    status: 'upcoming',
+    description: 'Cohort rehearsal for delivery structure, recommendations, and speaking roles.'
+  },
+  {
+    id: 'milestone-5',
+    title: 'Client Analytics Showcase Prep',
+    date: '2026-10-15',
+    category: 'presentation',
+    status: 'upcoming',
+    description: 'Final readiness checkpoint for visuals, demo flow, and stakeholder questions.'
   }
 ];
 
@@ -287,6 +352,57 @@ export const ONBOARDING_ROADMAP: RoadmapTask[] = [
     category: '30-day'
   }
 ];
+
+export const ONBOARDING_CULTURE_VALUES_CONTENT: OnboardingCultureValuesContent = {
+  eyebrow: 'Culture & Values',
+  title: 'Intern Expectations & West Monroe Values',
+  description: 'This page is reserved for the approved onboarding guidance interns should review during Week 1. Replace these slots with official expectations and values copy when it is ready.',
+  expectations: [
+    {
+      id: 'expectation-slot-1',
+      title: 'Intern Expectation Slot 1',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-2',
+      title: 'Intern Expectation Slot 2',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-3',
+      title: 'Intern Expectation Slot 3',
+      description: 'Approved intern expectation wording pending.'
+    },
+    {
+      id: 'expectation-slot-4',
+      title: 'Intern Expectation Slot 4',
+      description: 'Approved intern expectation wording pending.'
+    }
+  ],
+  values: [
+    {
+      id: 'value-slot-1',
+      title: 'West Monroe Value Slot 1',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-2',
+      title: 'West Monroe Value Slot 2',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-3',
+      title: 'West Monroe Value Slot 3',
+      description: 'Approved West Monroe value wording pending.'
+    },
+    {
+      id: 'value-slot-4',
+      title: 'West Monroe Value Slot 4',
+      description: 'Approved West Monroe value wording pending.'
+    }
+  ],
+  footerNote: 'Official values and expectation wording should be supplied by the program team before this page is treated as final policy guidance.'
+};
 
 export const TECHNICAL_GUIDES: TechnicalGuide[] = [
   {
@@ -409,6 +525,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Career Advisor',
     department: 'Product Engineering',
     status: 'Willing to help',
+    email: 's.anderson@genesysworks.org',
+    linkedinUrl: 'https://www.linkedin.com/in/sarah-anderson',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAhQBkLur8Qcnr9X1RQZ509yOk5irHztceU9QDrol70pd0ALSsY04zG7JPTFt-01omvuEqVTtHmYKJ61JsA-vXSMDmD-G2wvaEOzliTWd3IwyBV3z3RMf0_b6cVtCptqSeQCSUl0LD9bKaFDqW4AgJqZW7QO5yZRPzSb-HZTvpBtCc35rhlkufbXNyhW9z7H5SzVoBRzTJm2J7XszwPyrr4iLZUMOPSyY5YnSfXQre-8vaoiGYLT6pTbwD8WK16GBLWKsfe2uib4GI'
   },
   {
@@ -417,6 +535,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Mentor',
     department: 'Data & Analytics',
     status: 'Willing to help',
+    email: 'm.chen@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/marcus-chen',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDzU9z_XUzA2i2mRDEA3GdgFDX0fvc0gfA3XK4RSsMCLaM61CVwbedWRLchnKdVLIG9t-0jJsqPU3exxu2STW7SOxT8DHvCrSgaNfsEfSVAaWCXODjqLFWfDDSg6mzxHaMrjwRqFbe6SIZrTgbd0DXqKBV0nxZqOBjUJNnQlTMxpQXRXZ-rFZVk9XIlEUiibydxPAgcDtPkAs_SGdlHh87l_SiZ8R-B3n1rG4lDMMSDwHrstemlKethzRSdHXdOSrbvyqgXIGScxzY'
   },
   {
@@ -425,6 +545,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Project Manager',
     department: 'Operations Excellence',
     status: 'In Meeting',
+    email: 'j.lee@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/jasmine-lee',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGdqcGBvWzX4W0pLtK6WK5xNDjzekwKynlTNOnSVihl0q0SrKpTV5UsU7Fgh7mdUCozYXSZzbcHKXnry8SQwoOIo3_MqdxFlC44NrKItrmou3Ip_3ywtFIOUV2mTk6wij7Lurwx64hu8f1ncQk9bMg5KctsKGNp-omd4g3H1CfK1sLqNdUGZWIM1QjZnb-LbVlz13B60JJ_n8eEmNxiavXUEhB3JZAIEVwjGbe2ABjV-ZQ_Ndwc_x5oe44U2PPSrCMDDD65BITo0w'
   },
   {
@@ -433,6 +555,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Mentor',
     department: 'Customer Experience',
     status: 'Willing to help',
+    email: 'd.park@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/david-park',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAuHLJxWkdtG2S4JlbozWO0jRwQCYOiUUc0sr6QTZXdp5SOZo36w-XRHV2awgXyM7yAII2Lt_onrAVcJhncH673qxiuzhfbmuvNFDrVrhOA0HwU5sQ7c_cQpbYy3m09MjRDYpfQkWf1dtj54dMcJOYHZnyYZoYP_VgnrXuMSiw84sicrx8N_SHH6W76sJYgcNRKvvhRuWxbQpKmDFsg7fUNpICWMesrlTeMMOvL2JCu4MfR1_SU46gjKzOxodgBJJWPi-4AYK-K6Kk'
   },
   {
@@ -441,6 +565,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Career Advisor',
     department: 'Product Engineering',
     status: 'Willing to help',
+    email: 'e.rodriguez@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/elena-rodriguez',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIZeHsQeLEk5ikBraGzVgdsJqjS2nl1WIjZmarGYhzjh4m-nRNMefLEZDmebvBYRze3hBdQJiv79B3SFapHeFXpb5jVlxYqE22ShIfQu6JkrK7kL_YdYbtH1k-18FggOBhHYqYmFKyg0RSPvjFUj3w8Oqv6ASx57Js3iIU71qmtiHvlIyu511SwpqThzshlpXZTH8i3VxW5ilKER2lmP1HXTC-ZtjgogrFFdoE3X3gDa2is3oUdjGcf4MQd9lYVhTFK4-_voJAjsM'
   },
   {
@@ -449,6 +575,8 @@ export const INITIAL_CONTACTS: Contact[] = [
     role: 'Project Manager',
     department: 'Data & Analytics',
     status: 'Offline',
+    email: 't.wright@westmonroe.com',
+    linkedinUrl: 'https://www.linkedin.com/in/thomas-wright',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBBq150J1Esqj7wvuKg1A9Jlpt40Y6DPaXdD8hLk3kQMNdgL3OCYi0kWvQbRbo2zGoxsNbAEY4I7qozuozElACw38BLNXzm-5en7G3MSeCAZnxFadzLNYh2yZN7pjNnRbY6dxadX3OBNGgxb13IX9373iuHq6juTAZOHSMg1y7Q-G54EnV0YQTJXa_sw3St9lZtXe1fxn1fJYrZsQhlRww5G83uMS9k0meI8znmnWYdhSGoQSAwUroD1OxFgLColRVCGSTFw3ineWs'
   }
 ];
@@ -457,36 +585,42 @@ export const INITIAL_FAQS: FaqItem[] = [
   {
     id: 'faq-1',
     category: 'scheduling',
+    status: 'published',
     question: 'How do I report my weekly hours?',
     answer: 'You should submit your hours through the "Project Board" tab by EOD every Friday. Ensure you categorize your hours correctly according to the project codes provided in your onboarding packet.'
   },
   {
     id: 'faq-2',
     category: 'scheduling',
+    status: 'published',
     question: 'What is the policy for requesting a personal day?',
     answer: 'Personal days should be requested at least 72 hours in advance. Use the "Get Support" button to submit a request to your program coordinator.'
   },
   {
     id: 'faq-3',
     category: 'technical',
+    status: 'published',
     question: "I'm having trouble with my Single Sign-On (SSO).",
     answer: 'Try clearing your browser cache and cookies first. If the problem persists, please contact the West Monroe IT Helpdesk at extension 1102.'
   },
   {
     id: 'faq-4',
     category: 'professional',
+    status: 'published',
     question: 'What is the dress code for client meetings?',
     answer: 'Our firm standard is business casual (chinos, structured slacks, blouses, collared shirts, and dress shoes). When attending on-site client meetings, match the client’s environment but err on the side of high-contrast professionalism.'
   },
   {
     id: 'faq-5',
     category: 'technical',
+    status: 'published',
     question: 'How do I configure my secure VPN tunnel connection?',
     answer: 'Initialize your GlobalProtect agent client, input "portal.westmonroe.com" as your gateway node, log in with password credentials, and complete mobile MFA push authorization.'
   },
   {
     id: 'faq-6',
     category: 'professional',
+    status: 'published',
     question: 'How should I communicate a brief delay for standing sprints?',
     answer: 'Send a responsive alert message to your buddy/manager via Teams or Slack. Include an estimated timestamp of arrival (ETA), and review notes to catch up on any action items you missed.'
   }

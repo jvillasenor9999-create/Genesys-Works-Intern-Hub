@@ -25,212 +25,82 @@ import {
   Unlock,
   Building
 } from 'lucide-react';
-import { Task, RoadmapTask } from '../../types';
+import {
+  Task,
+  ManagedUser,
+  CohortInternProfile,
+  CohortChecklistItem,
+  CohortCourse
+} from '../../types';
 
 interface InternsDashboardProps {
   userRole: 'admin' | 'intern';
   triggerToast: (msg: string) => void;
   userNickname: string;
+  managedUsers: ManagedUser[];
+  cohortProfiles: CohortInternProfile[];
+  setCohortProfiles: React.Dispatch<React.SetStateAction<CohortInternProfile[]>>;
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  activeInternUserId: string;
 }
 
-interface MockIntern {
+interface CohortInternViewModel {
   id: string;
   name: string;
   email: string;
-  department: 'Product Engineering' | 'Data & Analytics' | 'Customer Experience' | 'Operations' | 'Career Development';
+  department: ManagedUser['department'];
   avatar: string;
-  onboardingProgress: number; // percentage
-  learningCompleteness: number; // percentage
+  onboardingProgress: number;
+  learningCompleteness: number;
   hardwareChoice: string;
   mentor: string;
   tasks: Task[];
-  onboardingChecklist: { id: string; title: string; category: 'Pre-Arrival' | 'Week 1' | '30-Day'; checked: boolean }[];
-  courses: { id: string; title: string; progress: number; category: string; type: 'video' | 'lab' | 'course' }[];
+  onboardingChecklist: CohortChecklistItem[];
+  courses: CohortCourse[];
 }
 
 export default function InternsDashboard({
   userRole,
   triggerToast,
-  userNickname
+  managedUsers,
+  cohortProfiles,
+  setCohortProfiles,
+  tasks,
+  setTasks,
+  activeInternUserId
 }: InternsDashboardProps) {
+  const calculateProgress = (items: { checked: boolean }[]) => (
+    items.length === 0 ? 0 : Math.round((items.filter(item => item.checked).length / items.length) * 100)
+  );
 
-  // Dynamic state for interns database
-  const [interns, setInterns] = useState<MockIntern[]>([
-    {
-      id: 'int-1',
-      name: 'Alex Rivera',
-      email: 'a.rivera@genesysworks.org',
-      department: 'Product Engineering',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-      onboardingProgress: 65,
-      learningCompleteness: 80,
-      hardwareChoice: 'MacBook Pro 14"',
-      mentor: 'Sarah Anderson',
-      tasks: [
-        {
-          id: 't-101',
-          title: 'Resolve Salesforce CRM sandbox pipeline replication limits',
-          status: 'progress',
-          type: 'Bug Fix',
-          priority: 'High',
-          dueDate: 'Sep 25',
-          description: 'The standard sandboxed accounts are throttling metadata synchronization. We need to split schema partitions and test incremental updates in small batches.',
-          comments: []
-        },
-        {
-          id: 't-102',
-          title: 'Refile React-Router nested view transition indices',
-          status: 'review',
-          type: 'Feature',
-          priority: 'Medium',
-          dueDate: 'Sep 28',
-          description: 'Improve animations across secondary dashboard lists. Make sure there is zero flicker when swapping from calendar sync dialogs directly to faq articles.',
-          comments: []
-        },
-        {
-          id: 't-103',
-          title: 'Translate custom styling classes to tailwind utility variables',
-          status: 'done',
-          type: 'Feature',
-          priority: 'Low',
-          dueDate: 'Completed',
-          description: 'Scrubbed legacy styling tokens out of the landing cards and replaced them with robust tailwind classes.',
-          comments: []
-        }
-      ],
-      onboardingChecklist: [
-        { id: 'ob-1', title: 'Sign offer letter & background forms', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-2', title: 'Complete Genesys bio survey', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-3', title: 'Request dynamic laptop procurement keys', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-4', title: 'Verify workspace login tokens', category: 'Week 1', checked: true },
-        { id: 'ob-5', title: 'Schedule sync with Assigned Onboarding Buddy', category: 'Week 1', checked: false },
-        { id: 'ob-6', title: 'Participate in cohort professional ethics seminar', category: 'Week 1', checked: false },
-        { id: 'ob-7', title: 'Submit 30-day intern self-alignment logbook', category: '30-Day', checked: false }
-      ],
-      courses: [
-        { id: 'c-1', title: 'ServiceNow Fundamentals', progress: 100, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-2', title: 'Excel Analytics Deep Dive', progress: 85, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-3', title: 'MFA & Enterprise Hardware Guidelines', progress: 100, category: 'Governance', type: 'lab' },
-        { id: 'c-4', title: 'Slack & Professional Communication Etiquette', progress: 40, category: 'Professionalism', type: 'video' }
-      ]
-    },
-    {
-      id: 'int-2',
-      name: 'Jordan Smith',
-      email: 'j.smith@genesysworks.org',
-      department: 'Data & Analytics',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-      onboardingProgress: 42,
-      learningCompleteness: 35,
-      hardwareChoice: 'Lenovo ThinkPad X1',
-      mentor: 'Marcus Chen',
-      tasks: [
-        {
-          id: 't-201',
-          title: 'Assemble West Monroe summer kickoff presentation slides',
-          status: 'todo',
-          type: 'Opportunity',
-          priority: 'Medium',
-          dueDate: 'Sep 29',
-          description: 'Format program status graphs and internship scope summary cards for presentation to executive staff.',
-          comments: []
-        },
-        {
-          id: 't-202',
-          title: 'Establish Postgres client-side SQL dashboard metrics',
-          status: 'progress',
-          type: 'Feature',
-          priority: 'High',
-          dueDate: 'Sep 30',
-          description: 'Connect cloud data connectors to pull staging report queries.',
-          comments: []
-        }
-      ],
-      onboardingChecklist: [
-        { id: 'ob-201', title: 'Sign offer letter & background forms', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-202', title: 'Complete Genesys bio survey', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-203', title: 'Request dynamic laptop procurement keys', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-204', title: 'Verify workspace login tokens', category: 'Week 1', checked: false },
-        { id: 'ob-205', title: 'Schedule sync with Assigned Onboarding Buddy', category: 'Week 1', checked: false },
-        { id: 'ob-206', title: 'Participate in cohort professional ethics seminar', category: 'Week 1', checked: false },
-        { id: 'ob-207', title: 'Submit 30-day intern self-alignment logbook', category: '30-Day', checked: false }
-      ],
-      courses: [
-        { id: 'c-1', title: 'ServiceNow Fundamentals', progress: 40, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-2', title: 'Excel Analytics Deep Dive', progress: 10, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-3', title: 'MFA & Enterprise Hardware Guidelines', progress: 100, category: 'Governance', type: 'lab' },
-        { id: 'c-4', title: 'Slack & Professional Communication Etiquette', progress: 90, category: 'Professionalism', type: 'video' }
-      ]
-    },
-    {
-      id: 'int-3',
-      name: 'Tyler Durden',
-      email: 't.durden@genesysworks.org',
-      department: 'Operations',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120',
-      onboardingProgress: 90,
-      learningCompleteness: 95,
-      hardwareChoice: 'Lenovo ThinkPad X1',
-      mentor: 'Sarah Anderson',
-      tasks: [
-        {
-          id: 't-301',
-          title: 'Review compliance checklist indexes',
-          status: 'done',
-          type: 'Completed',
-          priority: 'Low',
-          dueDate: 'Completed',
-          description: 'Checked software inventory assets with procurement logistics directors.',
-          comments: []
-        }
-      ],
-      onboardingChecklist: [
-        { id: 'ob-301', title: 'Sign offer letter & background forms', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-302', title: 'Complete Genesys bio survey', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-303', title: 'Request dynamic laptop procurement keys', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-304', title: 'Verify workspace login tokens', category: 'Week 1', checked: true },
-        { id: 'ob-305', title: 'Schedule sync with Assigned Onboarding Buddy', category: 'Week 1', checked: true },
-        { id: 'ob-306', title: 'Participate in cohort professional ethics seminar', category: 'Week 1', checked: true },
-        { id: 'ob-307', title: 'Submit 30-day intern self-alignment logbook', category: '30-Day', checked: false }
-      ],
-      courses: [
-        { id: 'c-1', title: 'ServiceNow Fundamentals', progress: 100, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-2', title: 'Excel Analytics Deep Dive', progress: 100, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-3', title: 'MFA & Enterprise Hardware Guidelines', progress: 100, category: 'Governance', type: 'lab' },
-        { id: 'c-4', title: 'Slack & Professional Communication Etiquette', progress: 100, category: 'Professionalism', type: 'video' }
-      ]
-    },
-    {
-      id: 'int-4',
-      name: 'John Doe',
-      email: 'j.doe@unprovisioned.org',
-      department: 'Product Engineering',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=120',
-      onboardingProgress: 14,
-      learningCompleteness: 5,
-      hardwareChoice: 'MacBook Pro 14"',
-      mentor: 'David Park',
-      tasks: [],
-      onboardingChecklist: [
-        { id: 'ob-401', title: 'Sign offer letter & background forms', category: 'Pre-Arrival', checked: true },
-        { id: 'ob-402', title: 'Complete Genesys bio survey', category: 'Pre-Arrival', checked: false },
-        { id: 'ob-403', title: 'Request dynamic laptop procurement keys', category: 'Pre-Arrival', checked: false },
-        { id: 'ob-404', title: 'Verify workspace login tokens', category: 'Week 1', checked: false },
-        { id: 'ob-405', title: 'Schedule sync with Assigned Onboarding Buddy', category: 'Week 1', checked: false },
-        { id: 'ob-406', title: 'Participate in cohort professional ethics seminar', category: 'Week 1', checked: false },
-        { id: 'ob-407', title: 'Submit 30-day intern self-alignment logbook', category: '30-Day', checked: false }
-      ],
-      courses: [
-        { id: 'c-1', title: 'ServiceNow Fundamentals', progress: 0, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-2', title: 'Excel Analytics Deep Dive', progress: 0, category: 'Technical Tooling', type: 'course' },
-        { id: 'c-3', title: 'MFA & Enterprise Hardware Guidelines', progress: 20, category: 'Governance', type: 'lab' },
-        { id: 'c-4', title: 'Slack & Professional Communication Etiquette', progress: 0, category: 'Professionalism', type: 'video' }
-      ]
-    }
-  ]);
+  const calculateLearningCompleteness = (courses: CohortCourse[]) => (
+    courses.length === 0 ? 0 : Math.round(courses.reduce((total, course) => total + course.progress, 0) / courses.length)
+  );
 
-  // Selected intern index
-  const [selectedInternId, setSelectedInternId] = useState<string>('int-1');
+  const internUsers = managedUsers.filter(user => user.role === 'Summer Intern');
+  const interns: CohortInternViewModel[] = internUsers.map(user => {
+    const cohortProfile = cohortProfiles.find(profile => profile.userId === user.id);
+    const onboardingChecklist = cohortProfile?.onboardingChecklist ?? [];
+    const courses = cohortProfile?.courses ?? [];
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      department: user.department,
+      avatar: user.avatar,
+      onboardingProgress: calculateProgress(onboardingChecklist),
+      learningCompleteness: calculateLearningCompleteness(courses),
+      hardwareChoice: user.hardware,
+      mentor: user.mentorPreference ?? 'Unassigned',
+      tasks: tasks.filter(task => task.assigneeUserId === user.id),
+      onboardingChecklist,
+      courses
+    };
+  });
+
+  const [selectedInternId, setSelectedInternId] = useState<string>(activeInternUserId);
   
   // Dashboard Sub-Tabs
   const [viewTab, setViewTab] = useState<'board' | 'learning' | 'checklist' | 'timeline'>('board');
@@ -239,98 +109,86 @@ export default function InternsDashboard({
   const [searchText, setSearchText] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('All');
 
-  // Currently viewed intern object
-  const activeIntern = interns.find(i => i.id === selectedInternId) || interns[0];
+  const selectedInternIdForView = interns.some(intern => intern.id === selectedInternId)
+    ? selectedInternId
+    : activeInternUserId && interns.some(intern => intern.id === activeInternUserId)
+    ? activeInternUserId
+    : interns[0]?.id ?? '';
+  const activeIntern = interns.find(i => i.id === selectedInternIdForView);
+  const averageProgress = interns.length > 0
+    ? Math.round(interns.reduce((a, b) => a + b.onboardingProgress, 0) / interns.length)
+    : 0;
+
+  React.useEffect(() => {
+    if (activeInternUserId && interns.some(intern => intern.id === activeInternUserId)) {
+      setSelectedInternId(activeInternUserId);
+    }
+  }, [activeInternUserId, managedUsers]);
 
   // Helper function to count tasks by status for an intern
-  const getTaskCount = (intern: MockIntern, status: Task['status']) => {
+  const getTaskCount = (intern: CohortInternViewModel, status: Task['status']) => {
     return intern.tasks.filter(t => t.status === status).length;
   };
 
   // Switch check value of checklist step
   const handleToggleChecklistStep = (internId: string, itemId: string) => {
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === internId) {
-        const updatedChecklist = intern.onboardingChecklist.map(step => {
-          if (step.id === itemId) {
-            triggerToast(`checklist task updated for ${intern.name}!`);
-            return { ...step, checked: !step.checked };
+    const intern = interns.find(item => item.id === internId);
+    setCohortProfiles(prev => prev.map(profile => (
+      profile.userId === internId
+        ? {
+            ...profile,
+            onboardingChecklist: profile.onboardingChecklist.map(step => (
+              step.id === itemId ? { ...step, checked: !step.checked } : step
+            ))
           }
-          return step;
-        });
-
-        // recalculate overall progress dynamically
-        const checkedCount = updatedChecklist.filter(s => s.checked).length;
-        const total = updatedChecklist.length;
-        const onboardingProgress = Math.round((checkedCount / total) * 100);
-
-        return {
-          ...intern,
-          onboardingChecklist: updatedChecklist,
-          onboardingProgress
-        };
-      }
-      return intern;
-    }));
+        : profile
+    )));
+    triggerToast(`Checklist task updated for ${intern?.name ?? 'intern'}!`);
   };
 
   // Fast auto-check everything
   const handleVerifyAllChecklist = (internId: string) => {
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === internId) {
-        const updatedChecklist = intern.onboardingChecklist.map(step => ({ ...step, checked: true }));
-        triggerToast(`Verified all onboarding milestones for ${intern.name}!`);
-        return {
-          ...intern,
-          onboardingChecklist: updatedChecklist,
-          onboardingProgress: 100
-        };
-      }
-      return intern;
-    }));
+    const intern = interns.find(item => item.id === internId);
+    setCohortProfiles(prev => prev.map(profile => (
+      profile.userId === internId
+        ? {
+            ...profile,
+            onboardingChecklist: profile.onboardingChecklist.map(step => ({ ...step, checked: true }))
+          }
+        : profile
+    )));
+    triggerToast(`Verified all onboarding milestones for ${intern?.name ?? 'intern'}!`);
   };
 
   // Modify tasks assigned status directly
   const handleUpdateTaskStatus = (internId: string, taskId: string, newStatus: Task['status']) => {
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === internId) {
-        const updatedTasks = intern.tasks.map(t => {
-          if (t.id === taskId) {
-            triggerToast(`Moved "${t.title}" to ${newStatus.toUpperCase()}`);
-            return { ...t, status: newStatus };
-          }
-          return t;
-        });
-        return { ...intern, tasks: updatedTasks };
-      }
-      return intern;
+    setTasks(prev => prev.map(task => {
+      if (task.id !== taskId || task.assigneeUserId !== internId) return task;
+
+      triggerToast(`Moved "${task.title}" to ${newStatus.toUpperCase()}`);
+      return {
+        ...task,
+        status: newStatus,
+        type: newStatus === 'done' ? 'Completed' : task.type === 'Completed' ? 'Feature' : task.type,
+        progress: newStatus === 'done' ? 100 : task.progress
+      };
     }));
   };
 
   // Quick modify course progress manually
   const handleSetCourseProgress = (internId: string, courseId: string, amount: number) => {
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === internId) {
-        const updatedCourses = intern.courses.map(c => {
-          if (c.id === courseId) {
-            const nextProgress = Math.min(100, Math.max(0, c.progress + amount));
-            return { ...c, progress: nextProgress };
+    setCohortProfiles(prev => prev.map(profile => (
+      profile.userId === internId
+        ? {
+            ...profile,
+            courses: profile.courses.map(course => {
+              if (course.id !== courseId) return course;
+              const nextProgress = Math.min(100, Math.max(0, course.progress + amount));
+              return { ...course, progress: nextProgress };
+            })
           }
-          return c;
-        });
-
-        // Recalculate average completeness
-        const sum = updatedCourses.reduce((idx, val) => idx + val.progress, 0);
-        const learningCompleteness = Math.round(sum / updatedCourses.length);
-
-        return {
-          ...intern,
-          courses: updatedCourses,
-          learningCompleteness
-        };
-      }
-      return intern;
-    }));
+        : profile
+    )));
     triggerToast(`Adjusted course progress index.`);
   };
 
@@ -340,7 +198,7 @@ export default function InternsDashboard({
   
   const handleQuickAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickTaskTitle.trim()) return;
+    if (!quickTaskTitle.trim() || !activeIntern) return;
 
     const newTask: Task = {
       id: `t-sim-${Date.now()}`,
@@ -350,32 +208,22 @@ export default function InternsDashboard({
       priority: quickTaskPriority,
       dueDate: 'Oct 02',
       description: 'Administrative mock task dispatched on-demand from the cohort supervisor dashboard.',
+      assigneeUserId: activeIntern.id,
+      assignee: {
+        name: activeIntern.name,
+        avatar: activeIntern.avatar
+      },
       comments: []
     };
 
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === selectedInternId) {
-        return {
-          ...intern,
-          tasks: [newTask, ...intern.tasks]
-        };
-      }
-      return intern;
-    }));
-
+    setTasks(prev => [newTask, ...prev]);
     setQuickTaskTitle('');
     triggerToast(`Dispatched new sprint task card to ${activeIntern.name}`);
   };
 
   // Delete task 
   const handleDeleteTask = (internId: string, taskId: string) => {
-    setInterns(prev => prev.map(intern => {
-      if (intern.id === internId) {
-        const filtered = intern.tasks.filter(t => t.id !== taskId);
-        return { ...intern, tasks: filtered };
-      }
-      return intern;
-    }));
+    setTasks(prev => prev.filter(task => !(task.id === taskId && task.assigneeUserId === internId)));
     triggerToast('Removed task card from intern view.');
   };
 
@@ -386,6 +234,18 @@ export default function InternsDashboard({
     const matchesDept = deptFilter === 'All' || i.department === deptFilter;
     return matchesSearch && matchesDept;
   });
+
+  if (!activeIntern) {
+    return (
+      <div className="bg-white border border-[#E1E4E8] rounded-xl p-8 text-center space-y-3">
+        <Users className="w-10 h-10 text-gray-300 mx-auto" />
+        <h2 className="text-base font-bold text-wm-navy">No Summer Intern Users</h2>
+        <p className="text-xs text-on-surface-variant">
+          Add a Summer Intern user in Settings to populate the cohort overview.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in text-left select-none">
@@ -416,7 +276,7 @@ export default function InternsDashboard({
           <div className="text-left">
             <span className="text-[9px] uppercase font-mono tracking-wider font-bold text-gray-500 block">Average Progress</span>
             <span className="text-xl font-extrabold text-[#0072CE] mt-0.5">
-              {Math.round(interns.reduce((a, b) => a + b.onboardingProgress, 0) / interns.length)}%
+              {averageProgress}%
             </span>
           </div>
         </div>
@@ -463,7 +323,7 @@ export default function InternsDashboard({
             {/* List scrollable items */}
             <div className="flex-1 divide-y divide-gray-100 overflow-y-auto max-h-[480px]">
               {filteredInterns.map((intern) => {
-                const isSelected = intern.id === selectedInternId;
+                const isSelected = intern.id === selectedInternIdForView;
                 const tasksTotal = intern.tasks.length;
                 const tasksDone = intern.tasks.filter(t => t.status === 'done').length;
 
@@ -632,7 +492,7 @@ export default function InternsDashboard({
                   <label className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block">Priority</label>
                   <select
                     value={quickTaskPriority}
-                    onChange={(e: any) => setQuickTaskPriority(e.target.value)}
+                    onChange={(e) => setQuickTaskPriority(e.target.value as 'High' | 'Medium' | 'Low')}
                     className="w-full text-xs p-2 bg-white border border-[#E1E4E8] rounded-md cursor-pointer outline-none"
                   >
                     <option value="High">🔴 High</option>

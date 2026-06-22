@@ -23,7 +23,7 @@ import {
   Terminal,
   HelpCircle
 } from 'lucide-react';
-import type { ManagedUser } from '../../types';
+import type { ManagedUser, ManagedUserRole } from '../../types';
 
 interface PlatformDashboardProps {
   userRole: 'admin' | 'intern';
@@ -31,6 +31,7 @@ interface PlatformDashboardProps {
   userNickname: string;
   managedUsers: ManagedUser[];
   setManagedUsers: React.Dispatch<React.SetStateAction<ManagedUser[]>>;
+  onUserRoleChange: (userId: string, newRole: ManagedUserRole) => void;
 }
 
 // Integrations types
@@ -59,7 +60,8 @@ export default function PlatformDashboard({
   triggerToast,
   userNickname,
   managedUsers,
-  setManagedUsers
+  setManagedUsers,
+  onUserRoleChange
 }: PlatformDashboardProps) {
 
   // Integration instances list state
@@ -226,14 +228,10 @@ export default function PlatformDashboard({
   const [loadingIntegrations, setLoadingIntegrations] = useState<Record<string, boolean>>({});
 
   // User list edits
-  const handleRoleChange = (userId: string, newRole: ManagedUser['role']) => {
-    setManagedUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        triggerToast(`Updated Role for ${u.name} to ${newRole}`);
-        return { ...u, role: newRole };
-      }
-      return u;
-    }));
+  const handleRoleChange = (userId: string, newRole: ManagedUserRole) => {
+    const user = managedUsers.find(u => u.id === userId);
+    onUserRoleChange(userId, newRole);
+    triggerToast(`Updated Role for ${user?.name ?? 'user'} to ${newRole}`);
   };
 
   const handleStatusChange = (userId: string, newStatus: ManagedUser['status']) => {
@@ -449,7 +447,7 @@ export default function PlatformDashboard({
                       <td className="p-3.5">
                         <select
                           value={user.role}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value as ManagedUser['role'])}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value as ManagedUserRole)}
                           className={`text-xs py-1 px-2 border rounded-md bg-white cursor-pointer select-none outline-none font-bold ${
                             user.role === 'Administrator' ? 'text-[#E0533C] border-red-200 bg-red-50/20' :
                             user.role === 'Program Coordinator' ? 'text-[#0072CE] border-blue-200 bg-blue-50/10' :

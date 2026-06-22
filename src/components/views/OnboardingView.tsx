@@ -1,30 +1,48 @@
 import React, { useState } from 'react';
 import { 
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2, 
   Circle, 
   Lock, 
   Calendar, 
-  PlaySquare, 
   BookOpen, 
-  HelpCircle, 
   Star,
   Sparkles,
-  Award
+  Award,
+  ShieldCheck,
+  Edit3,
+  Save,
+  X,
+  Plus,
+  Trash2,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
-import { RoadmapTask, UserRole, UserPermissions } from '../../types';
+import { RoadmapTask, UserRole, UserPermissions, OnboardingCultureValuesContent, OnboardingContentSlot } from '../../types';
 
 interface OnboardingViewProps {
   roadmap: RoadmapTask[];
   setRoadmap: React.Dispatch<React.SetStateAction<RoadmapTask[]>>;
+  cultureValuesContent: OnboardingCultureValuesContent;
+  setCultureValuesContent: React.Dispatch<React.SetStateAction<OnboardingCultureValuesContent>>;
   brandProgress: number; // overall progress e.g. 42
   setBrandProgress: (val: number) => void;
   userRole?: UserRole;
   permissions?: UserPermissions;
+  triggerToast: (msg: string) => void;
 }
+
+type OnboardingSubView = 'roadmap' | 'culture-values';
+type CultureValuesSection = 'expectations' | 'values';
+type CultureValuesTextField = 'eyebrow' | 'title' | 'description' | 'footerNote';
+type CultureValuesSlotField = 'title' | 'description';
 
 export default function OnboardingView({
   roadmap,
   setRoadmap,
+  cultureValuesContent,
+  setCultureValuesContent,
   brandProgress,
   setBrandProgress,
   userRole = 'intern',
@@ -33,11 +51,167 @@ export default function OnboardingView({
     allowInternsToCreateFAQ: true,
     allowInternsToSyncMeetings: true,
     allowInternsToSelfApproveMilestones: true
-  }
+  },
+  triggerToast
 }: OnboardingViewProps) {
+  const [activeOnboardingSubView, setActiveOnboardingSubView] = useState<OnboardingSubView>('roadmap');
+  const [isEditingCultureValues, setIsEditingCultureValues] = useState(false);
+  const [draftCultureValuesContent, setDraftCultureValuesContent] = useState<OnboardingCultureValuesContent>(cultureValuesContent);
+  const [cultureValuesFormError, setCultureValuesFormError] = useState<string | null>(null);
+  const isAdmin = userRole === 'admin';
+  const displayedCultureValuesContent = isEditingCultureValues ? draftCultureValuesContent : cultureValuesContent;
   
   // Calculate completed task counts dynamically
   const completedRoadmapsCount = roadmap.filter(r => r.status === 'completed').length;
+
+  React.useEffect(() => {
+    if (!isEditingCultureValues) {
+      setDraftCultureValuesContent(cultureValuesContent);
+    }
+  }, [cultureValuesContent, isEditingCultureValues]);
+
+  React.useEffect(() => {
+    if (!isAdmin && isEditingCultureValues) {
+      setIsEditingCultureValues(false);
+      setDraftCultureValuesContent(cultureValuesContent);
+      setCultureValuesFormError(null);
+    }
+  }, [cultureValuesContent, isAdmin, isEditingCultureValues]);
+
+  const handleStartEditCultureValues = () => {
+    setDraftCultureValuesContent(cultureValuesContent);
+    setCultureValuesFormError(null);
+    setIsEditingCultureValues(true);
+  };
+
+  const handleCancelEditCultureValues = () => {
+    setDraftCultureValuesContent(cultureValuesContent);
+    setCultureValuesFormError(null);
+    setIsEditingCultureValues(false);
+  };
+
+  const handleUpdateDraftCultureField = (field: CultureValuesTextField, value: string) => {
+    setDraftCultureValuesContent(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleUpdateDraftSlot = (
+    section: CultureValuesSection,
+    slotId: string,
+    field: CultureValuesSlotField,
+    value: string
+  ) => {
+    setDraftCultureValuesContent(prev => ({
+      ...prev,
+      [section]: prev[section].map(item => (
+        item.id === slotId ? { ...item, [field]: value } : item
+      ))
+    }));
+  };
+
+  const handleAddDraftSlot = (section: CultureValuesSection) => {
+    const isExpectation = section === 'expectations';
+    const newSlot: OnboardingContentSlot = {
+      id: `${section}-${Date.now()}`,
+      title: isExpectation ? 'New Intern Expectation' : 'New West Monroe Value',
+      description: 'Approved wording pending.'
+    };
+
+    setDraftCultureValuesContent(prev => ({
+      ...prev,
+      [section]: [...prev[section], newSlot]
+    }));
+    setCultureValuesFormError(null);
+  };
+
+  const handleRemoveDraftSlot = (section: CultureValuesSection, slotId: string) => {
+    if (draftCultureValuesContent[section].length <= 1) {
+      setCultureValuesFormError('Each section needs at least one card.');
+      return;
+    }
+
+    setDraftCultureValuesContent(prev => ({
+      ...prev,
+      [section]: prev[section].filter(item => item.id !== slotId)
+    }));
+    setCultureValuesFormError(null);
+  };
+
+  const handleMoveDraftSlot = (section: CultureValuesSection, slotId: string, direction: 'up' | 'down') => {
+    setDraftCultureValuesContent(prev => {
+      const nextItems = [...prev[section]];
+      const currentIndex = nextItems.findIndex(item => item.id === slotId);
+      const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= nextItems.length) {
+        return prev;
+      }
+
+      const [movedItem] = nextItems.splice(currentIndex, 1);
+      if (!movedItem) return prev;
+
+      nextItems.splice(nextIndex, 0, movedItem);
+
+      return {
+        ...prev,
+        [section]: nextItems
+      };
+    });
+    setCultureValuesFormError(null);
+  };
+
+  const validateCultureValuesDraft = () => {
+    if (!draftCultureValuesContent.title.trim()) {
+      return 'Page title is required before saving.';
+    }
+
+    const hasBlankExpectation = draftCultureValuesContent.expectations.some(item => (
+      !item.title.trim() || !item.description.trim()
+    ));
+    if (hasBlankExpectation) {
+      return 'All intern expectation titles and descriptions are required.';
+    }
+
+    const hasBlankValue = draftCultureValuesContent.values.some(item => (
+      !item.title.trim() || !item.description.trim()
+    ));
+    if (hasBlankValue) {
+      return 'All West Monroe value titles and descriptions are required.';
+    }
+
+    return null;
+  };
+
+  const trimContentSlot = (item: OnboardingContentSlot): OnboardingContentSlot => ({
+    ...item,
+    title: item.title.trim(),
+    description: item.description.trim()
+  });
+
+  const handleSaveCultureValuesContent = () => {
+    const validationError = validateCultureValuesDraft();
+    if (validationError) {
+      setCultureValuesFormError(validationError);
+      return;
+    }
+
+    const sanitizedContent: OnboardingCultureValuesContent = {
+      eyebrow: draftCultureValuesContent.eyebrow.trim(),
+      title: draftCultureValuesContent.title.trim(),
+      description: draftCultureValuesContent.description.trim(),
+      expectations: draftCultureValuesContent.expectations.map(trimContentSlot),
+      values: draftCultureValuesContent.values.map(trimContentSlot),
+      footerNote: draftCultureValuesContent.footerNote.trim()
+    };
+
+    setCultureValuesContent(sanitizedContent);
+    setDraftCultureValuesContent(sanitizedContent);
+    setCultureValuesFormError(null);
+    setIsEditingCultureValues(false);
+    triggerToast('Culture & Values page updated.');
+  };
   
   const handleToggleSubtask = (roadmapId: string, subtaskIndex: number) => {
     if (userRole === 'intern' && !permissions.allowInternsToSelfApproveMilestones) {
@@ -78,6 +252,354 @@ export default function OnboardingView({
   const handleStartSetupAction = () => {
     alert("Initiating secure Duo Multi-Factor Authentication (MFA) wizard on your summer intern workstation...");
   };
+
+  const handleOpenCultureValues = () => {
+    setActiveOnboardingSubView('culture-values');
+  };
+
+  const handleBackToRoadmap = () => {
+    setActiveOnboardingSubView('roadmap');
+  };
+
+  if (activeOnboardingSubView === 'culture-values') {
+    return (
+      <div className="space-y-6 select-none text-left">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={handleBackToRoadmap}
+            className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#E1E4E8] bg-white px-4 py-2 text-xs font-bold text-on-surface-variant shadow-sm transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Roadmap
+          </button>
+
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              {isEditingCultureValues ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditCultureValues}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-4 py-2 text-xs font-bold text-on-surface-variant transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveCultureValuesContent}
+                    className="inline-flex items-center gap-2 rounded-lg bg-wm-royal px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Page
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartEditCultureValues}
+                  className="inline-flex items-center gap-2 rounded-lg bg-wm-navy px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Edit Page
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {isEditingCultureValues && (
+          <section className="rounded-xl border border-[#E1E4E8] bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-wm-royal">
+                <Edit3 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Admin Editor</p>
+                <h3 className="text-sm font-display font-extrabold text-wm-navy">Culture &amp; Values Page Content</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Page Eyebrow</label>
+                <input
+                  type="text"
+                  value={draftCultureValuesContent.eyebrow}
+                  onChange={(e) => handleUpdateDraftCultureField('eyebrow', e.target.value)}
+                  className="w-full rounded-lg border border-[#D1D5DB] bg-[#FAFBFD] px-3 py-2 text-xs font-medium text-on-surface outline-none transition-all focus:border-wm-royal focus:bg-white focus:ring-2 focus:ring-wm-royal/15"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Page Title</label>
+                <input
+                  type="text"
+                  value={draftCultureValuesContent.title}
+                  onChange={(e) => handleUpdateDraftCultureField('title', e.target.value)}
+                  className="w-full rounded-lg border border-[#D1D5DB] bg-[#FAFBFD] px-3 py-2 text-xs font-medium text-on-surface outline-none transition-all focus:border-wm-royal focus:bg-white focus:ring-2 focus:ring-wm-royal/15"
+                />
+              </div>
+
+              <div className="space-y-1 lg:col-span-2">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Page Description</label>
+                <textarea
+                  rows={3}
+                  value={draftCultureValuesContent.description}
+                  onChange={(e) => handleUpdateDraftCultureField('description', e.target.value)}
+                  className="w-full resize-none rounded-lg border border-[#D1D5DB] bg-[#FAFBFD] px-3 py-2 text-xs font-medium leading-relaxed text-on-surface outline-none transition-all focus:border-wm-royal focus:bg-white focus:ring-2 focus:ring-wm-royal/15"
+                />
+              </div>
+
+              <div className="space-y-1 lg:col-span-2">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Footer Note</label>
+                <textarea
+                  rows={2}
+                  value={draftCultureValuesContent.footerNote}
+                  onChange={(e) => handleUpdateDraftCultureField('footerNote', e.target.value)}
+                  className="w-full resize-none rounded-lg border border-[#D1D5DB] bg-[#FAFBFD] px-3 py-2 text-xs font-medium leading-relaxed text-on-surface outline-none transition-all focus:border-wm-royal focus:bg-white focus:ring-2 focus:ring-wm-royal/15"
+                />
+              </div>
+            </div>
+
+            {cultureValuesFormError && (
+              <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-bold text-status-blocked">
+                {cultureValuesFormError}
+              </p>
+            )}
+          </section>
+        )}
+
+        <section className="bg-wm-navy text-white rounded-xl border border-wm-navy shadow-sm overflow-hidden">
+          <div className="p-8 md:p-10 grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-8 items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-white/85">
+                <ShieldCheck className="w-3.5 h-3.5 text-shoutout-gold" />
+                {displayedCultureValuesContent.eyebrow}
+              </span>
+              <h2 className="mt-5 text-2xl md:text-3xl font-display font-extrabold leading-tight">
+                {displayedCultureValuesContent.title}
+              </h2>
+              <p className="mt-3 text-sm text-white/75 leading-relaxed max-w-2xl">
+                {displayedCultureValuesContent.description}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/15 bg-white/10 p-5">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-shoutout-gold">
+                {isEditingCultureValues ? 'Draft preview' : 'Read-only guidance'}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-white/75">
+                {isEditingCultureValues
+                  ? 'Changes are previewed here before they are saved for interns.'
+                  : 'Review this guidance alongside your onboarding roadmap. Reading this page does not affect onboarding progress.'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <section className="bg-white rounded-xl border border-[#E1E4E8] shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-wm-royal border border-blue-100 flex items-center justify-center">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Section 01</p>
+                <h3 className="text-base font-display font-extrabold text-wm-navy">Intern Expectations</h3>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {displayedCultureValuesContent.expectations.map((item, index) => (
+                isEditingCultureValues ? (
+                  <article key={item.id} className="rounded-xl border border-[#E1E4E8] bg-[#FAFBFD] p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E1E4E8] bg-white font-mono text-[10px] font-bold text-wm-royal">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDraftSlot('expectations', item.id, 'up')}
+                          disabled={index === 0}
+                          aria-label="Move intern expectation up"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-on-surface-variant transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2 ${index === 0 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDraftSlot('expectations', item.id, 'down')}
+                          disabled={index === displayedCultureValuesContent.expectations.length - 1}
+                          aria-label="Move intern expectation down"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-on-surface-variant transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2 ${index === displayedCultureValuesContent.expectations.length - 1 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDraftSlot('expectations', item.id)}
+                          disabled={displayedCultureValuesContent.expectations.length <= 1}
+                          aria-label="Remove intern expectation"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-status-blocked transition-all hover:border-status-blocked focus:outline-none focus:ring-2 focus:ring-status-blocked/40 focus:ring-offset-2 ${displayedCultureValuesContent.expectations.length <= 1 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Card Title</label>
+                        <input
+                          type="text"
+                          value={item.title}
+                          onChange={(e) => handleUpdateDraftSlot('expectations', item.id, 'title', e.target.value)}
+                          className="w-full rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-xs font-medium text-on-surface outline-none transition-all focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Card Description</label>
+                        <textarea
+                          rows={3}
+                          value={item.description}
+                          onChange={(e) => handleUpdateDraftSlot('expectations', item.id, 'description', e.target.value)}
+                          className="w-full resize-none rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-xs font-medium leading-relaxed text-on-surface outline-none transition-all focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                        />
+                      </div>
+                    </div>
+                  </article>
+                ) : (
+                  <article key={item.id} className="rounded-xl border border-[#E1E4E8] bg-[#FAFBFD] p-4 flex gap-4">
+                    <span className="w-8 h-8 rounded-full bg-white border border-[#E1E4E8] text-wm-royal font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-on-surface">{item.title}</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant">{item.description}</p>
+                    </div>
+                  </article>
+                )
+              ))}
+              {isEditingCultureValues && (
+                <button
+                  type="button"
+                  onClick={() => handleAddDraftSlot('expectations')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-wm-royal/40 bg-blue-50/40 px-4 py-3 text-xs font-bold text-wm-royal transition-all hover:border-wm-royal hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Intern Expectation
+                </button>
+              )}
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border border-[#E1E4E8] shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-[#FAFBCF]/60 text-[#bf8500] border border-[#F2A900]/25 flex items-center justify-center">
+                <Star className="w-5 h-5 fill-shoutout-gold text-shoutout-gold" />
+              </div>
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Section 02</p>
+                <h3 className="text-base font-display font-extrabold text-wm-navy">West Monroe Values</h3>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {displayedCultureValuesContent.values.map((item, index) => (
+                isEditingCultureValues ? (
+                  <article key={item.id} className="rounded-xl border border-[#E1E4E8] bg-[#FAFBFD] p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E1E4E8] bg-white font-mono text-[10px] font-bold text-[#bf8500]">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDraftSlot('values', item.id, 'up')}
+                          disabled={index === 0}
+                          aria-label="Move West Monroe value up"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-on-surface-variant transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2 ${index === 0 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDraftSlot('values', item.id, 'down')}
+                          disabled={index === displayedCultureValuesContent.values.length - 1}
+                          aria-label="Move West Monroe value down"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-on-surface-variant transition-all hover:border-wm-royal hover:text-wm-royal focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2 ${index === displayedCultureValuesContent.values.length - 1 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDraftSlot('values', item.id)}
+                          disabled={displayedCultureValuesContent.values.length <= 1}
+                          aria-label="Remove West Monroe value"
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[#D1D5DB] bg-white text-status-blocked transition-all hover:border-status-blocked focus:outline-none focus:ring-2 focus:ring-status-blocked/40 focus:ring-offset-2 ${displayedCultureValuesContent.values.length <= 1 ? 'cursor-not-allowed opacity-40' : ''}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Card Title</label>
+                        <input
+                          type="text"
+                          value={item.title}
+                          onChange={(e) => handleUpdateDraftSlot('values', item.id, 'title', e.target.value)}
+                          className="w-full rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-xs font-medium text-on-surface outline-none transition-all focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">Card Description</label>
+                        <textarea
+                          rows={3}
+                          value={item.description}
+                          onChange={(e) => handleUpdateDraftSlot('values', item.id, 'description', e.target.value)}
+                          className="w-full resize-none rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-xs font-medium leading-relaxed text-on-surface outline-none transition-all focus:border-wm-royal focus:ring-2 focus:ring-wm-royal/15"
+                        />
+                      </div>
+                    </div>
+                  </article>
+                ) : (
+                  <article key={item.id} className="rounded-xl border border-[#E1E4E8] bg-[#FAFBFD] p-4 flex gap-4">
+                    <span className="w-8 h-8 rounded-full bg-white border border-[#E1E4E8] text-[#bf8500] font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-on-surface">{item.title}</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant">{item.description}</p>
+                    </div>
+                  </article>
+                )
+              ))}
+              {isEditingCultureValues && (
+                <button
+                  type="button"
+                  onClick={() => handleAddDraftSlot('values')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#F2A900]/60 bg-[#FAFBCF]/30 px-4 py-3 text-xs font-bold text-[#8a6200] transition-all hover:border-[#F2A900] hover:bg-[#FAFBCF]/60 focus:outline-none focus:ring-2 focus:ring-[#F2A900]/70 focus:ring-offset-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add West Monroe Value
+                </button>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="bg-[#FAFBCF]/30 border border-[#F2A900]/25 rounded-xl p-5 flex items-start gap-3">
+          <Sparkles className="w-4 h-4 text-shoutout-gold fill-shoutout-gold shrink-0 mt-0.5" />
+          <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">
+            {displayedCultureValuesContent.footerNote}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 select-none text-left">
@@ -224,7 +746,12 @@ export default function OnboardingView({
             ))}
 
             {/* Embedded Culture & Values Card inside Week 1 column */}
-            <div className="rounded-xl overflow-hidden border border-[#E1E4E8] aspect-[4/3] relative group shadow-sm select-none">
+            <button
+              type="button"
+              onClick={handleOpenCultureValues}
+              className="w-full rounded-xl overflow-hidden border border-[#E1E4E8] aspect-[4/3] relative group shadow-sm select-none text-left transition-all hover:border-wm-royal hover:shadow-md focus:outline-none focus:ring-2 focus:ring-wm-royal focus:ring-offset-2"
+              aria-label="Open Culture and Values onboarding page"
+            >
               <img 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpwiVuqP_7dU0L_sDMhL-oWoC6wrVvbdckTtla3BKs6NCjhiraRvhQqFztVBi8sigSg-6Rn0EKvoYMz9q-3tA106aSGESQiqsmx3EOS_NCnY9LQosNMw6E6DXo9I9IQqP0Pc1Jj_w88lHp76HAOMCNwdxyEvzu-AA8HkX8CbypZrzj9iJfpu6BVeRGc2F8vy8NHGkb9muAP4bEz6JUGsfaXmdREFAqVC81w47ZUOChfnI41C6xQk-maI8cl2s5JO6ur1diNieqktA" 
@@ -232,12 +759,17 @@ export default function OnboardingView({
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-wm-navy/90 to-transparent flex flex-col justify-end p-5">
-                <h4 className="text-white font-display text-xs font-bold">Culture &amp; Values</h4>
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-white font-display text-xs font-bold">Culture &amp; Values</h4>
+                  <span className="w-8 h-8 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white transition-all group-hover:bg-white group-hover:text-wm-navy">
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                </div>
                 <p className="text-white/80 text-[10px] leading-relaxed font-sans mt-1">
                   Learn about the West Monroe mindset, organizational policies, and our long-term commitment to client delivery.
                 </p>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
